@@ -1,0 +1,74 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model FundHouse {
+  id          String       @id @default(uuid())
+  name        String       @unique
+  code        String?      @unique
+  description String?      @db.Text
+  website     String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  mutualFunds MutualFund[]
+}
+
+model FundCategory {
+  id          String       @id @default(uuid())
+  name        String       @unique
+  code        String?      @unique
+  description String?      @db.Text
+  riskLevel   RiskLevel    @default(MODERATE)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  mutualFunds MutualFund[]
+}
+
+model TaxCategory {
+  id          String       @id @default(uuid())
+  name        String       @unique
+  code        String?      @unique
+  description String?      @db.Text
+  holdingPeriod Int        // in months
+  taxRate     Decimal?     @db.Decimal(5, 2)  // for fixed rate categories
+  hasIndexation Boolean    @default(false)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  mutualFunds MutualFund[]
+}
+
+enum RiskLevel {
+  VERY_LOW
+  LOW
+  MODERATE
+  HIGH
+  VERY_HIGH
+}
+
+// This will be expanded later
+model MutualFund {
+  id            String       @id @default(uuid())
+  fundHouseId   String
+  fundHouse     FundHouse    @relation(fields: [fundHouseId], references: [id])
+  categoryId    String
+  category      FundCategory @relation(fields: [categoryId], references: [id])
+  taxCategoryId String
+  taxCategory   TaxCategory  @relation(fields: [taxCategoryId], references: [id])
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@index([fundHouseId])
+  @@index([categoryId])
+  @@index([taxCategoryId])
+}
