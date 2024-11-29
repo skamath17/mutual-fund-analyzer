@@ -48,6 +48,17 @@ model TaxCategory {
   mutualFunds MutualFund[]
 }
 
+model NAVHistory {
+  id          String      @id @default(uuid())
+  fundId      String
+  date        DateTime
+  nav         Decimal     @db.Decimal(10, 4)
+  fund        MutualFund  @relation(fields: [fundId], references: [id])
+  createdAt   DateTime    @default(now())
+
+  @@index([fundId, date])
+}
+
 enum RiskLevel {
   VERY_LOW
   LOW
@@ -67,6 +78,7 @@ model MutualFund {
   taxCategory   TaxCategory  @relation(fields: [taxCategoryId], references: [id])
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
+  navHistory  NAVHistory[]
 
   @@index([fundHouseId])
   @@index([categoryId])
