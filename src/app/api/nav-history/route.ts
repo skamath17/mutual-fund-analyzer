@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const navHistory = await prisma.NAVHistory.findMany({
+    const navHistory = await prisma.nAVHistory.findMany({
       where: {
         fundId: fundId,
         ...(startDate && { date: { gte: new Date(startDate) } }),
