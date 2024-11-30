@@ -9,6 +9,8 @@ import {
   Filter,
 } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 async function getTopFunds() {
   // We'll implement this later to fetch from our API
   return [];

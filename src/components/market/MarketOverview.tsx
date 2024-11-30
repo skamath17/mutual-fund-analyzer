@@ -6,6 +6,8 @@ import { ConsistentFundCard } from "./ConsistentFundCard";
 
 import { getApiUrl } from "@/lib/utils/api";
 
+export const dynamic = "force-dynamic";
+
 async function getMarketData() {
   const response = await fetch(getApiUrl("/api/market-trend"), {
     next: { revalidate: 300 },
