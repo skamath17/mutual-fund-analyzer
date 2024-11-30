@@ -1,5 +1,6 @@
 // src/app/page.tsx
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { MarketOverview } from "@/components/market/MarketOverview";
 import {
   ArrowUpRight,
   ArrowDownRight,
@@ -18,7 +19,6 @@ export default async function HomePage() {
 
   return (
     <div className="container mx-auto p-4 space-y-6">
-      {/* Header Section */}
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">FundsWatch</h1>
         <div className="flex gap-4">
@@ -31,7 +31,8 @@ export default async function HomePage() {
         </div>
       </div>
 
-      {/* Rest of the components... */}
+      {/* Market Overview Section */}
+      <MarketOverview />
     </div>
   );
 }
