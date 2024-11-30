@@ -4,9 +4,10 @@ import { MarketTrendCard } from "./MarketTrendCard";
 import { TopPerformerCard } from "./TopPerformerCard";
 import { ConsistentFundCard } from "./ConsistentFundCard";
 
+import { getApiUrl } from "@/lib/utils/api";
+
 async function getMarketData() {
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
-  const response = await fetch(`${baseUrl}/api/market-trend`, {
+  const response = await fetch(getApiUrl("/api/market-trend"), {
     next: { revalidate: 300 },
   });
 
@@ -17,8 +18,7 @@ async function getMarketData() {
 }
 
 async function getTopPerformer() {
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
-  const response = await fetch(`${baseUrl}/api/top-performers`, {
+  const response = await fetch(getApiUrl("/api/top-performers"), {
     next: { revalidate: 300 },
   });
 
@@ -29,8 +29,7 @@ async function getTopPerformer() {
 }
 
 async function getConsistentFund() {
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
-  const response = await fetch(`${baseUrl}/api/consistent-funds`, {
+  const response = await fetch(getApiUrl("/api/consistent-funds"), {
     next: { revalidate: 300 },
   });
 
