@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -36,16 +30,41 @@ model FundCategory {
 }
 
 model TaxCategory {
-  id          String       @id @default(uuid())
-  name        String       @unique
-  code        String?      @unique
-  description String?      @db.Text
-  holdingPeriod Int        // in months
-  taxRate     Decimal?     @db.Decimal(5, 2)  // for fixed rate categories
-  hasIndexation Boolean    @default(false)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  mutualFunds MutualFund[]
+  id            String       @id @default(uuid())
+  name          String       @unique
+  code          String?      @unique
+  description   String?      @db.Text
+  holdingPeriod Int         // in months
+  taxRate       Decimal?    @db.Decimal(5, 2)  // for fixed rate categories
+  hasIndexation Boolean     @default(false)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  mutualFunds   MutualFund[]
+}
+
+model MutualFund {
+  id            String       @id @default(uuid())
+  schemeCode    String      @unique  // from API
+  schemeName    String      // from API
+  schemeType    String      // from API (e.g., Open Ended, Close Ended)
+  fundHouseId   String
+  fundHouse     FundHouse    @relation(fields: [fundHouseId], references: [id])
+  categoryId    String
+  category      FundCategory @relation(fields: [categoryId], references: [id])
+  taxCategoryId String
+  taxCategory   TaxCategory  @relation(fields: [taxCategoryId], references: [id])
+  isin          String?     // Optional ISIN number
+  benchmark     String?     // Benchmark index
+  expenseRatio  Decimal?    @db.Decimal(5, 2)
+  minInvestment Decimal?    @db.Decimal(10, 2)
+  navHistory    NAVHistory[]
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([fundHouseId])
+  @@index([categoryId])
+  @@index([taxCategoryId])
+  @@index([schemeType])
 }
 
 model NAVHistory {
@@ -56,6 +75,7 @@ model NAVHistory {
   fund        MutualFund  @relation(fields: [fundId], references: [id])
   createdAt   DateTime    @default(now())
 
+  @@unique([fundId, date])  // Add this unique constraint
   @@index([fundId, date])
 }
 
@@ -65,22 +85,4 @@ enum RiskLevel {
   MODERATE
   HIGH
   VERY_HIGH
-}
-
-// This will be expanded later
-model MutualFund {
-  id            String       @id @default(uuid())
-  fundHouseId   String
-  fundHouse     FundHouse    @relation(fields: [fundHouseId], references: [id])
-  categoryId    String
-  category      FundCategory @relation(fields: [categoryId], references: [id])
-  taxCategoryId String
-  taxCategory   TaxCategory  @relation(fields: [taxCategoryId], references: [id])
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-  navHistory  NAVHistory[]
-
-  @@index([fundHouseId])
-  @@index([categoryId])
-  @@index([taxCategoryId])
 }
