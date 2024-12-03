@@ -4,13 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowUpRight } from "lucide-react";
 
 interface TopPerformerProps {
-  fundName: string;
+  schemeName: string;
   returnPercentage: number;
   period: string;
 }
 
 export function TopPerformerCard({
-  fundName,
+  schemeName,
   returnPercentage,
   period,
 }: TopPerformerProps) {
@@ -21,7 +21,7 @@ export function TopPerformerCard({
       </CardHeader>
       <CardContent>
         <div className="space-y-2">
-          <p className="font-medium">{fundName}</p>
+          <p className="font-medium">{schemeName}</p>
           <div className="flex items-center text-green-600">
             <ArrowUpRight className="h-4 w-4" />
             <span className="font-bold">

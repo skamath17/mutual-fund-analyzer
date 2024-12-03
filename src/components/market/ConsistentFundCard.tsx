@@ -4,14 +4,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp } from "lucide-react";
 
 interface ConsistentFundProps {
-  fundName: string;
+  schemeName: string;
   returnPercentage: number;
   period: string;
   consistency: string; // e.g., "High", "Very High"
 }
 
 export function ConsistentFundCard({
-  fundName,
+  schemeName,
   returnPercentage,
   period,
   consistency,
@@ -23,7 +23,7 @@ export function ConsistentFundCard({
       </CardHeader>
       <CardContent>
         <div className="space-y-2">
-          <p className="font-medium">{fundName}</p>
+          <p className="font-medium">{schemeName}</p>
           <div className="flex items-center text-blue-600">
             <TrendingUp className="h-4 w-4 mr-1" />
             <span className="font-bold">

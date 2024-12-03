@@ -1,6 +1,5 @@
 // src/components/market/MarketTrendCard.tsx
-"use client"; // Add this for client-side rendering
-
+"use client";
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
@@ -10,14 +9,14 @@ interface MarketTrendCardProps {
     date: string;
     nav: number;
   }[];
-  currentValue: number;
-  changePercentage: number;
+  currentValue: number | null; // Make it nullable
+  changePercentage: number | null; // Make it nullable
 }
 
 export function MarketTrendCard({
-  data,
-  currentValue,
-  changePercentage,
+  data = [],
+  currentValue = null,
+  changePercentage = null,
 }: MarketTrendCardProps) {
   return (
     <Card>
@@ -27,14 +26,21 @@ export function MarketTrendCard({
       <CardContent>
         <div className="flex justify-between items-center">
           <div>
-            <p className="text-2xl font-bold">₹{currentValue.toFixed(2)}</p>
+            <p className="text-2xl font-bold">
+              ₹{currentValue?.toFixed(2) ?? "N/A"}
+            </p>
             <p
               className={`text-sm ${
-                changePercentage >= 0 ? "text-green-600" : "text-red-600"
+                changePercentage && changePercentage >= 0
+                  ? "text-green-600"
+                  : "text-red-600"
               }`}
             >
-              {changePercentage >= 0 ? "+" : ""}
-              {changePercentage.toFixed(2)}% Today
+              {changePercentage
+                ? `${
+                    changePercentage >= 0 ? "+" : ""
+                  }${changePercentage.toFixed(2)}% Today`
+                : "N/A"}
             </p>
           </div>
           <div className="h-16 w-32">
@@ -43,7 +49,11 @@ export function MarketTrendCard({
                 <Line
                   type="monotone"
                   dataKey="nav"
-                  stroke={changePercentage >= 0 ? "#22c55e" : "#ef4444"}
+                  stroke={
+                    changePercentage && changePercentage >= 0
+                      ? "#22c55e"
+                      : "#ef4444"
+                  }
                   strokeWidth={2}
                   dot={false}
                 />

@@ -29,7 +29,9 @@ export async function GET() {
 
         return {
           fundId: fund.id,
-          fundName: `${fund.fundHouse.name} - ${fund.category.name}`,
+          fundHouseName: fund.fundHouse.name,
+          categoryName: fund.category.name,
+          schemeName: fund.schemeName, // Add this
           returns: returns.absoluteReturn,
         };
       })
@@ -38,7 +40,12 @@ export async function GET() {
     // Sort by returns and get top performer
     const topPerformer = fundReturns.sort((a, b) => b.returns - a.returns)[0];
 
-    return NextResponse.json(topPerformer);
+    return NextResponse.json({
+      fundName: `${topPerformer.fundHouseName} - ${topPerformer.categoryName}`,
+      schemeName: topPerformer.schemeName, // Include in response
+      fundHouse: topPerformer.fundHouseName, // Include fund house separately
+      returns: topPerformer.returns,
+    });
   } catch (error) {
     console.error("Error fetching top performers:", error);
     return NextResponse.json(

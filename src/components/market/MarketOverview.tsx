@@ -9,14 +9,28 @@ import { getApiUrl } from "@/lib/utils/api";
 export const dynamic = "force-dynamic";
 
 async function getMarketData() {
-  const response = await fetch(getApiUrl("/api/market-trend"), {
-    next: { revalidate: 300 },
-  });
+  try {
+    const response = await fetch(getApiUrl("/api/market-trend"), {
+      next: { revalidate: 300 },
+    });
 
-  if (!response.ok) {
-    throw new Error("Failed to fetch market trend data");
+    if (!response.ok) {
+      console.error("Failed to fetch market trend data");
+      return {
+        data: [],
+        currentValue: null,
+        changePercentage: null,
+      };
+    }
+    return response.json();
+  } catch (error) {
+    console.error("Error fetching market data:", error);
+    return {
+      data: [],
+      currentValue: null,
+      changePercentage: null,
+    };
   }
-  return response.json();
 }
 
 async function getTopPerformer() {
@@ -52,15 +66,15 @@ export async function MarketOverview() {
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
       <MarketTrendCard {...marketData} />
       <TopPerformerCard
-        fundName={topPerformer.fundName}
-        returnPercentage={topPerformer.returns}
+        schemeName={topPerformer?.schemeName ?? "N/A"}
+        returnPercentage={topPerformer?.returns ?? 0}
         period="1Y"
       />
       <ConsistentFundCard
-        fundName={mostConsistentFund.fundName}
-        returnPercentage={mostConsistentFund.returns}
+        schemeName={mostConsistentFund?.schemeName ?? "N/A"}
+        returnPercentage={mostConsistentFund?.returns ?? 0}
         period="1Y"
-        consistency={mostConsistentFund.consistency}
+        consistency={mostConsistentFund?.consistency ?? "N/A"}
       />
     </div>
   );

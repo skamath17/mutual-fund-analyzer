@@ -53,7 +53,7 @@ export async function fetchSchemeDetails(schemeCode: number) {
     }
     throw new Error("Scheme appears to be inactive");
   } catch (error) {
-    console.error(`Error fetching scheme ${schemeCode}:`, error);
-    throw error;
+    //console.error(`Error fetching scheme ${schemeCode}:`, error);
+    return null;
   }
 }

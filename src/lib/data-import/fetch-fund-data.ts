@@ -12,74 +12,61 @@ export async function fetchAndSaveFundData() {
     const allSchemes = await fetchAllSchemes();
     console.log(`Fetched ${allSchemes.length} total schemes from API`);
 
-    // 3. Filter schemes for our fund houses and process them
-    for (const fundHouse of fundHouses) {
-      try {
-        console.log(`Processing schemes for ${fundHouse.name}`);
+    // 3. Filter schemes for each fund house upfront
+    const schemesByFundHouse: { [key: string]: any[] } = {};
 
-        // Filter schemes for this fund house
-        const houseSchemes = allSchemes.filter(async (scheme) => {
-          const schemeName = scheme.schemeName.toLowerCase();
-          const houseName = fundHouse.name
-            .toLowerCase()
-            .replace(" mutual fund", "");
+    for (const scheme of allSchemes) {
+      const schemeName = scheme.schemeName.toLowerCase();
 
-          // Get scheme details to check category
+      for (const fundHouse of fundHouses) {
+        const houseName = fundHouse.name
+          .toLowerCase()
+          .replace(" mutual fund", "");
+
+        if (
+          schemeName.includes(houseName) &&
+          schemeName.includes("direct") &&
+          schemeName.includes("growth") &&
+          !schemeName.includes("regular") &&
+          !schemeName.includes("idcw")
+        ) {
+          if (!schemesByFundHouse[fundHouse.id]) {
+            schemesByFundHouse[fundHouse.id] = [];
+          }
+          schemesByFundHouse[fundHouse.id].push(scheme);
+        }
+      }
+    }
+
+    console.log("Filtered schemes by fund house:", schemesByFundHouse);
+
+    // 4. Process schemes for each fund house
+    for (const [fundHouseId, schemes] of Object.entries(schemesByFundHouse)) {
+      console.log(
+        `Processing ${schemes.length} schemes for fund house ID: ${fundHouseId}`
+      );
+
+      for (const scheme of schemes) {
+        try {
           const details = await fetchSchemeDetails(scheme.schemeCode);
-          const category = details?.meta?.scheme_category?.toLowerCase() || "";
-
-          // Check if it's Equity or Hybrid fund
-          const isEquityOrHybrid =
-            category.includes("equity") ||
-            category.includes("hybrid") ||
-            category.includes("balanced") ||
-            category.includes("large cap") ||
-            category.includes("mid cap") ||
-            category.includes("small cap") ||
-            category.includes("flexi cap") ||
-            category.includes("multi cap");
-
-          return (
-            schemeName.includes(houseName) && // Match fund house
-            schemeName.includes("direct") && // Only direct plans
-            !schemeName.includes("regular") &&
-            !schemeName.includes("idcw") && // Skip income distribution schemes
-            isEquityOrHybrid
-          ); // Only Equity or Hybrid funds
-        });
-
-        console.log(
-          `Found ${houseSchemes.length} schemes for ${fundHouse.name}`
-        );
-
-        // Process each scheme
-        for (const scheme of houseSchemes) {
-          try {
-            console.log(`Processing scheme: ${scheme.schemeName}`);
-            const details = await fetchSchemeDetails(scheme.schemeCode);
-            if (!details || !details.meta) continue;
-
-            // Save scheme details and NAV data
-            await saveSchemeData(details, fundHouse.id);
-
-            // Add delay between requests
-            await new Promise((resolve) => setTimeout(resolve, 500));
-          } catch (err) {
-            const errorMessage =
-              err instanceof Error ? err.message : "Unknown error";
-            console.error(
-              `Error processing scheme ${scheme.schemeCode}: ${errorMessage}`
-            );
+          if (!details || !details.meta) {
+            console.log(`Skipping inactive scheme: ${scheme.schemeCode}`);
             continue;
           }
+
+          // Save scheme details and NAV data
+          await saveSchemeData(details, fundHouseId);
+
+          // Add delay between requests
+          await new Promise((resolve) => setTimeout(resolve, 500));
+        } catch (err) {
+          const errorMessage =
+            err instanceof Error ? err.message : "Unknown error";
+          console.error(
+            `Error processing scheme ${scheme.schemeName}: ${errorMessage}`
+          );
+          continue;
         }
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : "Unknown error";
-        console.error(
-          `Error processing fund house ${fundHouse.name}: ${errorMessage}`
-        );
-        continue;
       }
     }
 
