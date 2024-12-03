@@ -5,14 +5,14 @@ import { calculateVolatilityMetrics } from "@/lib/calculations/volatility";
 
 export async function GET(
   request: NextRequest,
-  context: { params: { schemeCode: string } }
+  context: { params: { schemeCode: string } } // Correct type for the second argument
 ) {
-  const { params } = context; // Destructure params from context
+  const { schemeCode } = context.params; // Destructure params correctly
 
   try {
     const fund = await prisma.mutualFund.findUnique({
       where: {
-        schemeCode: params.schemeCode,
+        schemeCode,
       },
       include: {
         fundHouse: true,
@@ -29,15 +29,17 @@ export async function GET(
       return NextResponse.json({ error: "Fund not found" }, { status: 404 });
     }
 
-    // Calculate various metrics
+    // Process NAV history
     const navHistory = fund.navHistory.map((nh) => ({
       date: nh.date,
       nav: Number(nh.nav),
     }));
 
+    // Calculate metrics
     const returns = calculateDetailedReturns(navHistory, "1Y");
     const volatility = calculateVolatilityMetrics(navHistory);
 
+    // Return response
     return NextResponse.json({
       basicInfo: {
         schemeName: fund.schemeName,
@@ -45,9 +47,9 @@ export async function GET(
         category: fund.category.name,
         riskLevel: fund.category.riskLevel,
       },
-      navHistory: fund.navHistory,
+      navHistory: navHistory,
       metrics: {
-        latestNav: navHistory[0].nav,
+        latestNav: navHistory[0]?.nav || 0,
         returns,
         volatility,
       },
