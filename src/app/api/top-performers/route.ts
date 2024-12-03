@@ -32,6 +32,7 @@ export async function GET() {
           fundHouseName: fund.fundHouse.name,
           categoryName: fund.category.name,
           schemeName: fund.schemeName, // Add this
+          schemeCode: fund.schemeCode,
           returns: returns.absoluteReturn,
         };
       })
@@ -43,6 +44,7 @@ export async function GET() {
     return NextResponse.json({
       fundName: `${topPerformer.fundHouseName} - ${topPerformer.categoryName}`,
       schemeName: topPerformer.schemeName, // Include in response
+      schemeCode: topPerformer.schemeCode,
       fundHouse: topPerformer.fundHouseName, // Include fund house separately
       returns: topPerformer.returns,
     });

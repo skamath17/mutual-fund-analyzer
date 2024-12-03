@@ -48,6 +48,7 @@ export async function GET() {
             fundHouseName: fund.fundHouse.name,
             categoryName: fund.category.name,
             schemeName: fund.schemeName,
+            schemeCode: fund.schemeCode,
             returns: returns.absoluteReturn,
             sharpeRatio: volatility.sharpeRatio,
             consistency: getConsistencyRating(volatility.sharpeRatio),
@@ -68,6 +69,7 @@ export async function GET() {
           fundHouseName: string;
           categoryName: string;
           schemeName: string;
+          schemeCode: string;
           returns: number;
           sharpeRatio: number | undefined;
           consistency: string;
@@ -86,6 +88,7 @@ export async function GET() {
     if (!mostConsistent) {
       return NextResponse.json({
         schemeName: "N/A",
+        schemeCode: "N/A",
         fundHouse: "N/A",
         returns: 0,
         consistency: "N/A",
@@ -94,6 +97,7 @@ export async function GET() {
 
     return NextResponse.json({
       schemeName: mostConsistent.schemeName,
+      schemeCode: mostConsistent.schemeCode,
       fundHouse: mostConsistent.fundHouseName,
       returns: mostConsistent.returns,
       consistency: mostConsistent.consistency,

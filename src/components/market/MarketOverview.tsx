@@ -67,11 +67,13 @@ export async function MarketOverview() {
       <MarketTrendCard {...marketData} />
       <TopPerformerCard
         schemeName={topPerformer?.schemeName ?? "N/A"}
+        schemeCode={topPerformer?.schemeCode ?? ""}
         returnPercentage={topPerformer?.returns ?? 0}
         period="1Y"
       />
       <ConsistentFundCard
         schemeName={mostConsistentFund?.schemeName ?? "N/A"}
+        schemeCode={mostConsistentFund?.schemeCode ?? ""}
         returnPercentage={mostConsistentFund?.returns ?? 0}
         period="1Y"
         consistency={mostConsistentFund?.consistency ?? "N/A"}
