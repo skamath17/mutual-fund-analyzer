@@ -1,4 +1,3 @@
-// src/app/api/funds/[schemeCode]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { calculateDetailedReturns } from "@/lib/calculations/returns";
@@ -6,8 +5,10 @@ import { calculateVolatilityMetrics } from "@/lib/calculations/volatility";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { schemeCode: string } }
+  context: { params: { schemeCode: string } }
 ) {
+  const { params } = context; // Destructure params from context
+
   try {
     const fund = await prisma.mutualFund.findUnique({
       where: {
