@@ -79,6 +79,20 @@ model NAVHistory {
   @@index([fundId, date])
 }
 
+model NiftyHistory {
+  id          String      @id @default(uuid())
+  date        DateTime
+  open        Decimal     @db.Decimal(10, 2)
+  high        Decimal     @db.Decimal(10, 2)
+  low         Decimal     @db.Decimal(10, 2)
+  close       Decimal     @db.Decimal(10, 2)
+  volume      BigInt?
+  createdAt   DateTime    @default(now())
+
+  @@unique([date])
+  @@index([date])
+}
+
 enum RiskLevel {
   VERY_LOW
   LOW
