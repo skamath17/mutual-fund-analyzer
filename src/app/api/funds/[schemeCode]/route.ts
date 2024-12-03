@@ -1,11 +1,11 @@
 // src/app/api/funds/[schemeCode]/route.ts
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { calculateDetailedReturns } from "@/lib/calculations/returns";
 import { calculateVolatilityMetrics } from "@/lib/calculations/volatility";
 
 export async function GET(
-  request: Request,
+  request: NextRequest,
   { params }: { params: { schemeCode: string } }
 ) {
   try {
