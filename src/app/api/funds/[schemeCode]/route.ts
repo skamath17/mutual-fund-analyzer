@@ -5,9 +5,9 @@ import { calculateVolatilityMetrics } from "@/lib/calculations/volatility";
 
 export async function GET(
   request: NextRequest,
-  context: { params: { schemeCode: string } } // Correct type for the second argument
+  { params }: { params: Record<string, string> } // Use Record<string, string> for broader compatibility
 ) {
-  const { schemeCode } = context.params; // Destructure params correctly
+  const { schemeCode } = params; // Extract schemeCode safely
 
   try {
     const fund = await prisma.mutualFund.findUnique({
@@ -39,7 +39,6 @@ export async function GET(
     const returns = calculateDetailedReturns(navHistory, "1Y");
     const volatility = calculateVolatilityMetrics(navHistory);
 
-    // Return response
     return NextResponse.json({
       basicInfo: {
         schemeName: fund.schemeName,
