@@ -3,9 +3,15 @@ import prisma from "@/lib/prisma";
 import { calculateDetailedReturns } from "@/lib/calculations/returns";
 import { calculateVolatilityMetrics } from "@/lib/calculations/volatility";
 
+type RouteParams = {
+  params: {
+    schemeCode: string;
+  };
+};
+
 export async function GET(
   request: NextRequest,
-  { params }: { params: Record<string, string> } // Use Record<string, string> for broader compatibility
+  { params }: RouteParams // Use Record<string, string> for broader compatibility
 ) {
   const { schemeCode } = params; // Extract schemeCode safely
 
