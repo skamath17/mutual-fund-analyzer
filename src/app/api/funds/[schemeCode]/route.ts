@@ -5,11 +5,11 @@ import { calculateVolatilityMetrics } from "@/lib/calculations/volatility";
 
 export async function GET(
   request: NextRequest,
-  context: { params: { schemeCode: string } }
-): Promise<Response> {
-  const { schemeCode } = context.params;
-
+  { params }: { params: Promise<{ schemeCode: string }> }
+) {
   try {
+    const { schemeCode } = await params;
+
     const fund = await prisma.mutualFund.findUnique({
       where: {
         schemeCode,
