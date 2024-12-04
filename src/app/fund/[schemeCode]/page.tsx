@@ -17,12 +17,12 @@ async function getFundDetails(schemeCode: string) {
 }
 
 export default async function FundDetail({
-  params: rawParams,
+  params,
 }: {
-  params: { schemeCode: string };
+  params: Promise<{ schemeCode: string }>;
 }) {
-  const params = await rawParams;
-  const fundDetails = await getFundDetails(params.schemeCode);
+  const { schemeCode } = await params;
+  const fundDetails = await getFundDetails(schemeCode);
   const { basicInfo, navHistory, metrics } = fundDetails;
 
   return (
