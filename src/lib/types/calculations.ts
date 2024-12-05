@@ -12,6 +12,7 @@ export interface ReturnMetrics {
   endDate: Date;
   startNAV: number;
   endNAV: number;
+  insufficientData?: boolean;
 }
 
 export interface VolatilityMetrics {
@@ -26,4 +27,13 @@ export interface FundPerformance {
     [key in Period]?: ReturnMetrics;
   };
   volatility?: VolatilityMetrics;
+}
+
+export interface Holding {
+  id: string;
+  fundId: string;
+  companyName: string;
+  percentage: number | string; // Since Decimal from DB comes as string
+  sector?: string | null;
+  updatedAt: Date;
 }

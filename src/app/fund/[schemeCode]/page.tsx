@@ -2,6 +2,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import FundChart from "./FundChart";
 import { getApiUrl } from "@/lib/utils/api";
+import { Holding } from "@/lib/types/calculations";
 
 const period = "1Y";
 
@@ -23,7 +24,7 @@ export default async function FundDetail({
 }) {
   const { schemeCode } = await params;
   const fundDetails = await getFundDetails(schemeCode);
-  const { basicInfo, navHistory, metrics } = fundDetails;
+  const { basicInfo, navHistory, metrics, holdings } = fundDetails;
 
   return (
     <div className="container mx-auto p-4 space-y-6">
@@ -60,13 +61,13 @@ export default async function FundDetail({
           <CardContent>
             <div
               className={`text-2xl font-bold ${
-                metrics.returns.absoluteReturn >= 0
+                metrics.returns?.["1Y"]?.absoluteReturn >= 0
                   ? "text-green-600"
                   : "text-red-600"
               }`}
             >
-              {metrics.returns.absoluteReturn >= 0 ? "+" : ""}
-              {metrics.returns.absoluteReturn.toFixed(2)}% ({period})
+              {metrics.returns?.["1Y"]?.absoluteReturn >= 0 ? "+" : ""}
+              {metrics.returns?.["1Y"]?.absoluteReturn.toFixed(2)}%
             </div>
           </CardContent>
         </Card>
@@ -106,7 +107,59 @@ export default async function FundDetail({
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {/* We'll add returns for different periods here */}
+              {["1M", "3M", "6M", "1Y", "3Y", "5Y"].map((period) => {
+                const returnData = metrics.returns?.[period];
+                if (!returnData || returnData.insufficientData) {
+                  return (
+                    <div key={period} className="flex items-center gap-4">
+                      <span className="w-16 font-medium">{period}</span>
+                      <div className="flex-grow bg-gray-100 rounded-full h-2" />
+                      <span className="w-24 text-right font-medium text-gray-400">
+                        N/A
+                      </span>
+                      {period !== "1M" &&
+                        period !== "3M" &&
+                        period !== "6M" && (
+                          <span className="text-sm text-gray-400 w-24 text-right">
+                            Insufficient data
+                          </span>
+                        )}
+                    </div>
+                  );
+                }
+
+                const { absoluteReturn, annualizedReturn } = returnData;
+                const isPositive = absoluteReturn >= 0;
+
+                return (
+                  <div key={period} className="flex items-center gap-4">
+                    <span className="w-16 font-medium">{period}</span>
+                    <div className="flex-grow bg-gray-100 rounded-full h-2">
+                      <div
+                        className={`h-full rounded-full ${
+                          isPositive ? "bg-green-500" : "bg-red-500"
+                        }`}
+                        style={{
+                          width: `${Math.min(Math.abs(absoluteReturn), 100)}%`,
+                        }}
+                      />
+                    </div>
+                    <span
+                      className={`w-24 text-right font-medium ${
+                        isPositive ? "text-green-600" : "text-red-600"
+                      }`}
+                    >
+                      {isPositive ? "+" : ""}
+                      {absoluteReturn.toFixed(2)}%
+                    </span>
+                    {period !== "1M" && period !== "3M" && period !== "6M" && (
+                      <span className="text-sm text-gray-500 w-24 text-right">
+                        ({annualizedReturn.toFixed(2)}% ann.)
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </CardContent>
         </Card>
@@ -114,22 +167,38 @@ export default async function FundDetail({
         {/* Risk Analysis */}
         <Card>
           <CardHeader>
-            <CardTitle>Risk Analysis</CardTitle>
+            <CardTitle>Top Holdings</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="flex justify-between">
-                <span>Standard Deviation</span>
-                <span className="font-bold">
-                  {metrics.volatility.standardDeviation.toFixed(2)}%
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span>Sharpe Ratio</span>
-                <span className="font-bold">
-                  {metrics.volatility.sharpeRatio.toFixed(2)}
-                </span>
-              </div>
+              {holdings?.map((holding: Holding) => (
+                <div key={holding.id} className="relative">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-medium">{holding.companyName}</span>
+                    <span className="text-sm font-medium">
+                      {Number(holding.percentage).toFixed(2)}%
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-grow bg-gray-100 rounded-full h-2">
+                      <div
+                        className="bg-blue-600 h-full rounded-full"
+                        style={{
+                          width: `${Number(holding.percentage)}%`,
+                        }}
+                      />
+                    </div>
+                    {holding.sector && (
+                      <span className="text-sm text-gray-500 w-24">
+                        {holding.sector}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {(!holdings || holdings.length === 0) && (
+                <p className="text-gray-500">No holdings data available</p>
+              )}
             </div>
           </CardContent>
         </Card>

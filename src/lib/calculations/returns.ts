@@ -25,19 +25,19 @@ function getPeriodStartDate(period: Period): Date {
   const now = new Date();
   switch (period) {
     case "1M":
-      return new Date(now.setMonth(now.getMonth() - 1));
+      return new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
     case "3M":
-      return new Date(now.setMonth(now.getMonth() - 3));
+      return new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
     case "6M":
-      return new Date(now.setMonth(now.getMonth() - 6));
+      return new Date(now.getFullYear(), now.getMonth() - 6, now.getDate());
     case "1Y":
-      return new Date(now.setFullYear(now.getFullYear() - 1));
+      return new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
     case "3Y":
-      return new Date(now.setFullYear(now.getFullYear() - 3));
+      return new Date(now.getFullYear() - 3, now.getMonth(), now.getDate());
     case "5Y":
-      return new Date(now.setFullYear(now.getFullYear() - 5));
+      return new Date(now.getFullYear() - 5, now.getMonth(), now.getDate());
     default:
-      return new Date(now.setMonth(now.getMonth() - 1));
+      return new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
   }
 }
 
@@ -75,6 +75,20 @@ function findClosestNAV(navHistory: NAVData[], targetDate: Date): number {
   return closest.nav;
 }
 
+export function calculateAllPeriodReturns(
+  navHistory: NAVData[]
+): Record<Period, ReturnMetrics> {
+  const periods: Period[] = ["1M", "3M", "6M", "1Y", "3Y", "5Y"];
+
+  const returns: Partial<Record<Period, ReturnMetrics>> = {};
+
+  for (const period of periods) {
+    returns[period] = calculateDetailedReturns(navHistory, period);
+  }
+
+  return returns as Record<Period, ReturnMetrics>;
+}
+
 export function calculateCAGR(
   startNAV: number,
   endNAV: number,
@@ -96,6 +110,7 @@ export function calculateDetailedReturns(
       endDate: new Date(),
       startNAV: 0,
       endNAV: 0,
+      insufficientData: true,
     };
   }
 
@@ -106,8 +121,24 @@ export function calculateDetailedReturns(
   const endDate = sortedData[sortedData.length - 1].date;
   const endNAV = sortedData[sortedData.length - 1].nav;
   const periodStartDate = getPeriodStartDate(period);
-  const startNAV = findClosestNAV(sortedData, periodStartDate);
 
+  // Check if we have enough historical data
+  const earliestAvailableDate = new Date(sortedData[0].date);
+  const requestedStartDate = new Date(periodStartDate);
+
+  if (requestedStartDate < earliestAvailableDate) {
+    return {
+      absoluteReturn: 0,
+      annualizedReturn: 0,
+      startDate: requestedStartDate,
+      endDate,
+      startNAV: 0,
+      endNAV,
+      insufficientData: true,
+    };
+  }
+
+  const startNAV = findClosestNAV(sortedData, periodStartDate);
   const absoluteReturn = ((endNAV - startNAV) / startNAV) * 100;
   const years = getYearsBetweenDates(periodStartDate, endDate);
   const annualizedReturn = calculateCAGR(startNAV, endNAV, years);
@@ -119,6 +150,7 @@ export function calculateDetailedReturns(
     endDate,
     startNAV,
     endNAV,
+    insufficientData: false,
   };
 }
 

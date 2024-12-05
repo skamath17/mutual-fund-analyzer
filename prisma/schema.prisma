@@ -58,6 +58,7 @@ model MutualFund {
   expenseRatio  Decimal?    @db.Decimal(5, 2)
   minInvestment Decimal?    @db.Decimal(10, 2)
   navHistory    NAVHistory[]
+  holdings      Holding[]   // Add this line
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 
@@ -91,6 +92,18 @@ model NiftyHistory {
 
   @@unique([date])
   @@index([date])
+}
+
+model Holding {
+  id          String      @id @default(uuid())
+  fundId      String
+  fund        MutualFund  @relation(fields: [fundId], references: [id])
+  companyName String
+  percentage  Decimal     @db.Decimal(5, 2)
+  sector      String?
+  updatedAt   DateTime    @default(now())
+
+  @@index([fundId])
 }
 
 enum RiskLevel {

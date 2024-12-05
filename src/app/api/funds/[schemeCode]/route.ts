@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { calculateDetailedReturns } from "@/lib/calculations/returns";
+import { calculateAllPeriodReturns } from "@/lib/calculations/returns";
 import { calculateVolatilityMetrics } from "@/lib/calculations/volatility";
 
 export async function GET(
@@ -22,6 +22,12 @@ export async function GET(
             date: "desc",
           },
         },
+        holdings: {
+          orderBy: {
+            percentage: "desc",
+          },
+          take: 10,
+        },
       },
     });
 
@@ -36,7 +42,7 @@ export async function GET(
     }));
 
     // Calculate metrics
-    const returns = calculateDetailedReturns(navHistory, "1Y");
+    const allReturns = calculateAllPeriodReturns(navHistory);
     const volatility = calculateVolatilityMetrics(navHistory);
 
     return NextResponse.json({
@@ -49,9 +55,10 @@ export async function GET(
       navHistory: navHistory,
       metrics: {
         latestNav: navHistory[0]?.nav || 0,
-        returns,
+        returns: allReturns,
         volatility,
       },
+      holdings: fund.holdings,
     });
   } catch (error) {
     console.error("Error fetching fund details:", error);
