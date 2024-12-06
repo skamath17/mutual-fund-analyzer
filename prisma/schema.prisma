@@ -58,7 +58,8 @@ model MutualFund {
   expenseRatio  Decimal?    @db.Decimal(5, 2)
   minInvestment Decimal?    @db.Decimal(10, 2)
   navHistory    NAVHistory[]
-  holdings      Holding[]   // Add this line
+  holdings      Holding[]   
+  basketAllocations BasketAllocation[]
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 
@@ -103,6 +104,27 @@ model Holding {
   sector      String?
   updatedAt   DateTime    @default(now())
 
+  @@index([fundId])
+}
+
+model Basket {
+  id          String      @id @default(uuid())
+  name        String
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  fundAllocations BasketAllocation[]
+}
+
+model BasketAllocation {
+  id          String      @id @default(uuid())
+  basketId    String
+  fundId      String
+  allocation  Decimal     @db.Decimal(5, 2)  // Percentage allocation
+  basket      Basket      @relation(fields: [basketId], references: [id])
+  fund        MutualFund  @relation(fields: [fundId], references: [id])
+  createdAt   DateTime    @default(now())
+
+  @@index([basketId])
   @@index([fundId])
 }
 
