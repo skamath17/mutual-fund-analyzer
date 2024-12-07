@@ -11,6 +11,11 @@ interface BasketNAV {
   nav: number;
 }
 
+interface BasketMetricsResult {
+  metrics: FundMetrics;
+  navHistory: BasketNAV[];
+}
+
 interface FundMetrics {
   returns: number;
   annualizedReturn: number;
@@ -31,18 +36,21 @@ function calculateFundMetrics(navHistory: NAVData[]): number {
 export function calculateBasketMetrics(
   fundsData: Array<{ navHistory: NAVData[] }>,
   allocations: FundAllocation[]
-): FundMetrics {
+): BasketMetricsResult {
   if (
     !fundsData.length ||
     !allocations.length ||
     fundsData.some((fund) => fund.navHistory.length < 2)
   ) {
     return {
-      returns: 0,
-      annualizedReturn: 0,
-      maxDrawdown: 0,
-      sharpeRatio: 0,
-      volatility: 0,
+      metrics: {
+        returns: 0,
+        annualizedReturn: 0,
+        maxDrawdown: 0,
+        sharpeRatio: 0,
+        volatility: 0,
+      },
+      navHistory: [],
     };
   }
 
@@ -78,34 +86,15 @@ export function calculateBasketMetrics(
   let maxDrawdown = 0;
   let peak = basketNAVs[0].nav;
 
-  /*console.log(
-    "Initial basket NAVs:",
-    basketNAVs.slice(0, 5).map((nav) => ({
-      date: nav.date,
-      nav: nav.nav,
-    }))
-  );*/
   console.log("Initial peak:", peak);
 
   basketNAVs.forEach((basketNav) => {
     const { nav } = basketNav;
-
-    // Only update peak if we find a higher value
     if (nav > peak) {
-      //console.log(`New peak found: Previous=${peak}, New=${nav}`);
       peak = nav;
     }
-
-    // Calculate drawdown from current peak
     const drawdown = ((peak - nav) / peak) * 100;
-
-    // Update max drawdown if current drawdown is larger
     if (drawdown > maxDrawdown) {
-      /*console.log(
-        `New max drawdown: ${drawdown.toFixed(
-          2
-        )}% (Peak: ${peak}, Current NAV: ${nav})`
-      );*/
       maxDrawdown = drawdown;
     }
   });
@@ -136,11 +125,14 @@ export function calculateBasketMetrics(
     (annualizedReturnForSharpe - riskFreeRate) / (volatility / 100);
 
   return {
-    returns: weightedReturn,
-    annualizedReturn,
-    maxDrawdown,
-    sharpeRatio: sharpeRatio,
-    volatility,
+    metrics: {
+      returns: weightedReturn,
+      annualizedReturn,
+      maxDrawdown,
+      sharpeRatio: sharpeRatio,
+      volatility,
+    },
+    navHistory: basketNAVs,
   };
 }
 

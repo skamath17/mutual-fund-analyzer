@@ -7,6 +7,7 @@ import { X } from "lucide-react"; // For the remove icon
 import { Button } from "@/components/ui/button";
 import { getApiUrl } from "@/lib/utils/api";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import BasketPerformanceCharts from "@/components/BasketPerformanceChart";
 
 type Period = "1Y" | "3Y" | "5Y";
 
@@ -15,6 +16,11 @@ interface Fund {
   schemeName: string;
   fundHouse: { name: string };
   category: { name: string };
+}
+
+interface ChartData {
+  date: Date;
+  nav: number;
 }
 
 interface FundWithAllocation extends Fund {
@@ -35,6 +41,8 @@ export default function CreateBasket() {
   const [metrics, setMetrics] = useState<BasketMetrics | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState<Period>("1Y");
+  const [basketNavHistory, setBasketNavHistory] = useState<ChartData[]>([]);
+  const [niftyHistory, setNiftyHistory] = useState<ChartData[]>([]);
 
   const handleTestBasket = async (period: Period = "1Y") => {
     setIsLoading(true);
@@ -53,10 +61,10 @@ export default function CreateBasket() {
         }),
       });
 
-      if (!response.ok) throw new Error("Failed to analyze basket");
-
       const data = await response.json();
       setMetrics(data.metrics);
+      setBasketNavHistory(data.navHistory);
+      setNiftyHistory(data.niftyHistory);
       setShowResults(true);
       setSelectedPeriod(period);
     } catch (error) {
@@ -239,6 +247,15 @@ export default function CreateBasket() {
               </div>
             </CardContent>
           </Card>
+          <>
+            {/* Existing metrics cards */}
+            <div className="mt-6">
+              <BasketPerformanceCharts
+                navHistory={basketNavHistory}
+                niftyHistory={niftyHistory}
+              />
+            </div>
+          </>
         </div>
       )}
     </div>

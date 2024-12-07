@@ -5,6 +5,11 @@ export interface NAVData {
 
 export type Period = "1M" | "3M" | "6M" | "1Y" | "3Y" | "5Y";
 
+export interface BasketNAV {
+  date: Date;
+  nav: number;
+}
+
 export interface ReturnMetrics {
   absoluteReturn: number;
   annualizedReturn?: number;
