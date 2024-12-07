@@ -26,43 +26,61 @@ export default function BasketPerformanceCharts({
   navHistory,
   niftyHistory,
 }: BasketPerformanceChartProps) {
-  console.log("Nav History:", navHistory);
-  console.log("Nifty History:", niftyHistory);
+  // Get initial values for normalization
+  const initialBasketValue = navHistory[0]?.nav || 100;
+  const initialNiftyValue = niftyHistory[0]?.nav || 100;
 
   // Combine and transform the data for the chart
   const data = navHistory.map((item) => {
-    const niftyPoint = niftyHistory.find(
-      (n) => n.date.toString() === item.date.toString()
-    );
+    const basketDate = new Date(item.date).toISOString().split("T")[0];
+
+    const niftyPoint = niftyHistory.find((n) => {
+      const niftyDate = new Date(n.date).toISOString().split("T")[0];
+      return niftyDate === basketDate;
+    });
 
     return {
-      date: new Date(item.date).toISOString().split("T")[0],
-      basket: Number(item.nav),
-      nifty: niftyPoint ? Number(niftyPoint.nav) : null,
+      date: basketDate,
+      // Normalize both values to start from 100
+      basket: (Number(item.nav) / initialBasketValue) * 100,
+      nifty: niftyPoint
+        ? (Number(niftyPoint.nav) / initialNiftyValue) * 100
+        : null,
     };
   });
 
-  const debugData = navHistory.map((item) => {
-    const niftyPoint = niftyHistory.find(
-      (n) => n.date.toString() === item.date.toString()
-    );
+  console.log("Transformed Data First 5 Points:", data.slice(0, 5));
 
-    console.log("Debug data");
-
-    return {
-      date: new Date(item.date).toISOString().split("T")[0],
-      basket: Number(item.nav),
-      nifty: niftyPoint ? Number(niftyPoint.nav) : null,
-    };
-  });
+  /*const data = [
+    {
+      date: "2023-12-01",
+      basket: 100,
+      nifty: 100,
+    },
+    {
+      date: "2023-12-02",
+      basket: 102,
+      nifty: 101,
+    },
+    {
+      date: "2023-12-03",
+      basket: 105,
+      nifty: 103,
+    },
+    {
+      date: "2023-12-04",
+      basket: 103,
+      nifty: 102,
+    },
+    {
+      date: "2023-12-05",
+      basket: 106,
+      nifty: 104,
+    },
+  ];*/
 
   return (
     <Card>
-      <div className="p-2 bg-gray-100">
-        First basket value: {navHistory[0]?.nav}
-        <br />
-        First nifty value: {niftyHistory[0]?.nav}
-      </div>
       <CardHeader>
         <CardTitle>Relative Performance (Base 100)</CardTitle>
       </CardHeader>
@@ -90,8 +108,9 @@ export default function BasketPerformanceCharts({
                 dataKey="basket"
                 stroke="#2563eb"
                 dot={false}
-                name="Basket data"
+                name="Basket"
                 strokeWidth={2}
+                connectNulls={true}
               />
               <Line
                 type="monotone"
@@ -100,6 +119,7 @@ export default function BasketPerformanceCharts({
                 dot={false}
                 name="Nifty 50"
                 strokeWidth={2}
+                connectNulls={true}
               />
             </LineChart>
           </ResponsiveContainer>
