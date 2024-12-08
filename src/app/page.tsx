@@ -23,22 +23,6 @@ export default async function HomePage() {
 
   return (
     <div className="container mx-auto p-4 space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">FundsWatch</h1>
-        <div className="flex gap-4">
-          <Link href="/create-basket">
-            <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-              Create Fund Basket
-            </button>
-          </Link>
-          <Link href="/compare-funds">
-            <button className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
-              Compare Funds
-            </button>
-          </Link>
-        </div>
-      </div>
-
       {/* Market Overview Section */}
       <MarketOverview />
 
