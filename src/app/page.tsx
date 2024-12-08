@@ -1,6 +1,7 @@
 // src/app/page.tsx
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MarketOverview } from "@/components/market/MarketOverview";
+import { NewsFeed } from "@/components/news/NewsFeed";
 import Link from "next/link";
 import {
   ArrowUpRight,
@@ -30,14 +31,19 @@ export default async function HomePage() {
               Create Fund Basket
             </button>
           </Link>
-          <button className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
-            Compare Funds
-          </button>
+          <Link href="/compare-funds">
+            <button className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+              Compare Funds
+            </button>
+          </Link>
         </div>
       </div>
 
       {/* Market Overview Section */}
       <MarketOverview />
+
+      {/* News Feed Section */}
+      <NewsFeed />
     </div>
   );
 }
