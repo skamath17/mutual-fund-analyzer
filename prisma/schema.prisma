@@ -81,7 +81,7 @@ model NAVHistory {
   @@index([fundId, date])
 }
 
-model Index {
+model MarketIndex {
   id          String        @id @default(uuid())
   name        String        @unique  // e.g., "Nifty 50", "Bank Nifty"
   code        String        @unique  // e.g., "NIFTY", "BANKNIFTY"
@@ -94,7 +94,7 @@ model Index {
 model IndexHistory {
   id          String      @id @default(uuid())
   indexId     String
-  index       Index       @relation(fields: [indexId], references: [id])
+  index       MarketIndex       @relation(fields: [indexId], references: [id])
   date        DateTime
   open        Decimal     @db.Decimal(10, 2)
   high        Decimal     @db.Decimal(10, 2)

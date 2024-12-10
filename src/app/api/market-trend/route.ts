@@ -4,32 +4,52 @@ import prisma from "@/lib/prisma";
 
 export async function GET() {
   try {
-    // Get the latest 252 trading days (1 year) of Nifty data
-    const niftyData = await prisma.niftyHistory.findMany({
+    const niftyIndex = await prisma.marketIndex.findFirst({
+      where: {
+        code: "^NSEI",
+      },
+    });
+
+    if (!niftyIndex) {
+      throw new Error("Nifty 50 index not found");
+    }
+
+    const rawData = await prisma.indexHistory.findMany({
+      where: {
+        indexId: niftyIndex.id,
+      },
       orderBy: {
         date: "desc",
       },
-      take: 246,
+      take: 30,
     });
 
-    // Calculate current value and change
-    const latestValue = Number(niftyData[0].close);
-    const previousValue = Number(niftyData[1].close);
-    const changePercentage =
-      ((latestValue - previousValue) / previousValue) * 100;
+    // Convert BigInt to number and format the data
+    const data = rawData.map((item) => ({
+      ...item,
+      volume: item.volume ? Number(item.volume) : null,
+      // Also convert Decimal to number if needed
+      open: Number(item.open),
+      high: Number(item.high),
+      low: Number(item.low),
+      close: Number(item.close),
+    }));
+
+    const currentValue = data[0]?.close;
+    const previousValue = data[1]?.close;
+    const changePercentage = previousValue
+      ? ((currentValue - previousValue) / previousValue) * 100
+      : null;
 
     return NextResponse.json({
-      data: niftyData.map((d) => ({
-        date: d.date,
-        nav: Number(d.close), // Using 'nav' to maintain compatibility with existing component
-      })),
-      currentValue: latestValue,
-      changePercentage: changePercentage,
+      data,
+      currentValue,
+      changePercentage,
     });
   } catch (error) {
-    console.error("Error in market trend API:", error);
+    console.error("Error fetching market trend:", error);
     return NextResponse.json(
-      { error: "Failed to fetch market trend data" },
+      { error: "Failed to fetch market trend" },
       { status: 500 }
     );
   }

@@ -42,9 +42,20 @@ export async function POST(request: NextRequest) {
       result.navHistory[result.navHistory.length - 1].date
     );
 
-    // Fetch Nifty data for the same period
-    const niftyData = await prisma.niftyHistory.findMany({
+    const niftyIndex = await prisma.marketIndex.findFirst({
       where: {
+        code: "^NSEI",
+      },
+    });
+
+    if (!niftyIndex) {
+      throw new Error("Nifty 50 index not found");
+    }
+
+    // Then fetch the history data
+    const niftyData = await prisma.indexHistory.findMany({
+      where: {
+        indexId: niftyIndex.id,
         date: {
           gte: startDate,
           lte: endDate,
@@ -54,6 +65,16 @@ export async function POST(request: NextRequest) {
         date: "asc",
       },
     });
+
+    // Also ensure BigInt/Decimal conversion if needed
+    const formattedNiftyData = niftyData.map((item) => ({
+      ...item,
+      volume: item.volume ? Number(item.volume) : null,
+      open: Number(item.open),
+      high: Number(item.high),
+      low: Number(item.low),
+      close: Number(item.close),
+    }));
 
     // Normalize both datasets to base 100
     const normalizedData = normalizeDatasets(result.navHistory, niftyData);

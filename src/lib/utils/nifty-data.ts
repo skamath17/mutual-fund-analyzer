@@ -47,7 +47,7 @@ export async function fetchAndStoreNiftyData() {
           close: quotes.close[i],
         });
       }
-
+      /*
       await prisma.niftyHistory.upsert({
         where: {
           date: date,
@@ -67,7 +67,7 @@ export async function fetchAndStoreNiftyData() {
           close: quotes.close[i],
           volume: quotes.volume[i] || null,
         },
-      });
+      });*/
       processedCount++;
     }
 
