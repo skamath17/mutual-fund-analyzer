@@ -1,92 +1,48 @@
-import prisma from "@/lib/prisma";
-import { fetchAllSchemes, fetchSchemeDetails } from "./fetch-utils";
+// src/lib/utils/save-scheme-data.ts
 import { Prisma } from "@prisma/client";
+import prisma from "@/lib/prisma";
 
-export async function fetchAndSaveFundData() {
-  try {
-    // 1. Get all fund houses from our database
-    const fundHouses = await prisma.fundHouse.findMany();
-    console.log(`Found ${fundHouses.length} fund houses in database`);
+async function findMatchingCategory(schemeCategory: string) {
+  // Normalize the category name
+  const categoryName = schemeCategory.toLowerCase();
 
-    // 2. Get all schemes from API
-    const allSchemes = await fetchAllSchemes();
-    console.log(`Fetched ${allSchemes.length} total schemes from API`);
+  // Define category mappings
+  const categoryMappings = {
+    "index fund": "Index Funds",
+    "index funds": "Index Funds",
+    // Add more mappings as needed
+  };
 
-    // 3. Filter schemes for each fund house upfront
-    const schemesByFundHouse: { [key: string]: any[] } = {};
+  // First try exact match
+  let category = await prisma.fundCategory.findFirst({
+    where: {
+      name: schemeCategory,
+    },
+  });
 
-    for (const scheme of allSchemes) {
-      const schemeName = scheme.schemeName.toLowerCase();
-
-      for (const fundHouse of fundHouses) {
-        const houseName = fundHouse.name
-          .toLowerCase()
-          .replace(" mutual fund", "");
-
-        if (
-          schemeName.includes(houseName) &&
-          schemeName.includes("direct") &&
-          schemeName.includes("growth") &&
-          !schemeName.includes("regular") &&
-          !schemeName.includes("idcw")
-        ) {
-          if (!schemesByFundHouse[fundHouse.id]) {
-            schemesByFundHouse[fundHouse.id] = [];
-          }
-          schemesByFundHouse[fundHouse.id].push(scheme);
-        }
+  // If no exact match, try mapped categories
+  if (!category) {
+    for (const [key, value] of Object.entries(categoryMappings)) {
+      if (categoryName.includes(key)) {
+        category = await prisma.fundCategory.findFirst({
+          where: {
+            name: value,
+          },
+        });
+        if (category) break;
       }
     }
-
-    console.log("Filtered schemes by fund house:", schemesByFundHouse);
-
-    // 4. Process schemes for each fund house
-    for (const [fundHouseId, schemes] of Object.entries(schemesByFundHouse)) {
-      console.log(
-        `Processing ${schemes.length} schemes for fund house ID: ${fundHouseId}`
-      );
-
-      for (const scheme of schemes) {
-        try {
-          const details = await fetchSchemeDetails(scheme.schemeCode);
-          if (!details || !details.meta) {
-            console.log(`Skipping inactive scheme: ${scheme.schemeCode}`);
-            continue;
-          }
-
-          // Save scheme details and NAV data
-          await saveSchemeData(details, fundHouseId);
-
-          // Add delay between requests
-          await new Promise((resolve) => setTimeout(resolve, 500));
-        } catch (err) {
-          const errorMessage =
-            err instanceof Error ? err.message : "Unknown error";
-          console.error(
-            `Error processing scheme ${scheme.schemeName}: ${errorMessage}`
-          );
-          continue;
-        }
-      }
-    }
-
-    return { status: "success" };
-  } catch (error) {
-    console.error("Error in fetchAndSaveFundData:", error);
-    throw error;
   }
+
+  return category;
 }
 
-async function saveSchemeData(schemeDetails: any, fundHouseId: string) {
+export async function saveSchemeData(schemeDetails: any, fundHouseId: string) {
   const { meta, data: navData } = schemeDetails;
 
   try {
     // Find matching category
-    const category = await prisma.fundCategory.findFirst({
-      where: {
-        name: meta.scheme_category,
-      },
-    });
+    const category = await findMatchingCategory(meta.scheme_category);
 
     if (!category) {
       console.log(`Category not found for: ${meta.scheme_category}`);
@@ -106,14 +62,14 @@ async function saveSchemeData(schemeDetails: any, fundHouseId: string) {
       return;
     }
 
-    // Define the create data using Prisma's type
+    // Define the create data
     const createData: Prisma.MutualFundCreateInput = {
       schemeCode: meta.scheme_code.toString(),
       schemeName: meta.scheme_name,
       schemeType: meta.scheme_type || "Open Ended",
       fundHouse: { connect: { id: fundHouseId } },
       category: { connect: { id: category.id } },
-      taxCategory: { connect: { id: taxCategory.id } }, // Using category.id for now
+      taxCategory: { connect: { id: taxCategory.id } },
     };
 
     // Create or update the mutual fund entry
@@ -129,7 +85,7 @@ async function saveSchemeData(schemeDetails: any, fundHouseId: string) {
     });
 
     // Save NAV history
-    console.log(`Saving the delta NAV data for ${meta.scheme_name}`);
+    console.log(`Saving NAV data for ${meta.scheme_name}`);
     // Get latest NAV date from database
     const latestNAV = await prisma.nAVHistory.findFirst({
       where: { fundId: fund.id },
@@ -158,7 +114,6 @@ async function saveSchemeData(schemeDetails: any, fundHouseId: string) {
           await prisma.nAVHistory.upsert({
             where: {
               fundId_date: {
-                // Using the compound unique constraint
                 fundId: fund.id,
                 date: navDate,
               },

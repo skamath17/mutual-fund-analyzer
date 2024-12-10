@@ -81,8 +81,20 @@ model NAVHistory {
   @@index([fundId, date])
 }
 
-model NiftyHistory {
+model Index {
+  id          String        @id @default(uuid())
+  name        String        @unique  // e.g., "Nifty 50", "Bank Nifty"
+  code        String        @unique  // e.g., "NIFTY", "BANKNIFTY"
+  description String?       @db.Text
+  history     IndexHistory[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model IndexHistory {
   id          String      @id @default(uuid())
+  indexId     String
+  index       Index       @relation(fields: [indexId], references: [id])
   date        DateTime
   open        Decimal     @db.Decimal(10, 2)
   high        Decimal     @db.Decimal(10, 2)
@@ -91,8 +103,8 @@ model NiftyHistory {
   volume      BigInt?
   createdAt   DateTime    @default(now())
 
-  @@unique([date])
-  @@index([date])
+  @@unique([indexId, date])
+  @@index([indexId, date])
 }
 
 model Holding {
