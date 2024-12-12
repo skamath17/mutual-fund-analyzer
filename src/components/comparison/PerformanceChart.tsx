@@ -1,104 +1,143 @@
 // src/components/comparison/PerformanceChart.tsx
 "use client";
 
-import React from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   LineChart,
   Line,
   XAxis,
   YAxis,
   Tooltip,
-  Legend,
   ResponsiveContainer,
+  Legend,
 } from "recharts";
+import { AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
-interface FundData {
+// Keep existing ComparisonData interface
+interface ComparisonData {
   fundId: string;
   fundName: string;
+  fundHouse: string;
+  category: string;
   navHistory: Array<{ date: Date; nav: number }>;
 }
 
+// Add Period type
+type Period = "1Y" | "3Y" | "5Y";
+
 interface PerformanceChartProps {
-  data: FundData[];
+  data: ComparisonData[];
+  selectedPeriod: Period;
 }
 
-const COLORS = ["#2563eb", "#dc2626", "#047857"]; // blue, red, green
+const CHART_COLORS = ["#2563eb", "#dc2626", "#16a34a"];
 
-export function PerformanceChart({ data }: PerformanceChartProps) {
-  // Normalize NAV values to start from 100 for fair comparison
-  const normalizedData = React.useMemo(() => {
-    // Get the earliest date common to all funds
-    const allDates = new Set(
-      data.flatMap((fund) =>
-        fund.navHistory.map(
-          (nh) => new Date(nh.date).toISOString().split("T")[0]
-        )
-      )
+export function PerformanceChart({
+  data,
+  selectedPeriod,
+}: PerformanceChartProps) {
+  // Check if all funds have sufficient data for the selected period
+  const hasInsufficientData = data.some((fund) => {
+    const navHistory = fund.navHistory;
+    if (navHistory.length === 0) return true;
+
+    const oldestDate = new Date(navHistory[0].date);
+    const today = new Date();
+    const requiredMonths =
+      selectedPeriod === "1Y" ? 12 : selectedPeriod === "3Y" ? 36 : 60;
+
+    const monthsDifference =
+      (today.getFullYear() - oldestDate.getFullYear()) * 12 +
+      (today.getMonth() - oldestDate.getMonth());
+
+    return monthsDifference < requiredMonths;
+  });
+
+  if (hasInsufficientData) {
+    return (
+      <Alert variant="destructive">
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription>
+          Insufficient historical data available for {selectedPeriod}{" "}
+          comparison. Some funds dont have enough historical data for this time
+          period.
+        </AlertDescription>
+      </Alert>
     );
+  }
 
-    // Get initial NAV for each fund
-    const initialNavs = data.map((fund) => fund.navHistory[0].nav);
+  // Get initial values for normalization
+  const initialValues = data.reduce((acc, fund) => {
+    acc[fund.fundId] = fund.navHistory[0]?.nav || 100;
+    return acc;
+  }, {} as { [key: string]: number });
 
-    // Create normalized data points
-    const chartData = Array.from(allDates).map((dateStr) => {
-      const point: any = { date: dateStr };
-      data.forEach((fund, index) => {
-        const navPoint = fund.navHistory.find(
-          (nh) => new Date(nh.date).toISOString().split("T")[0] === dateStr
-        );
-        if (navPoint) {
-          point[`fund${index}`] = (navPoint.nav / initialNavs[index]) * 100;
-        }
-      });
-      return point;
+  // Find the common dates across all funds
+  const commonDates =
+    data[0]?.navHistory.map(
+      (item) => new Date(item.date).toISOString().split("T")[0]
+    ) || [];
+
+  // Transform the data for the chart
+  const chartData = commonDates.map((date) => {
+    const dataPoint: any = { date };
+
+    data.forEach((fund, index) => {
+      const navPoint = fund.navHistory.find(
+        (item) => new Date(item.date).toISOString().split("T")[0] === date
+      );
+
+      if (navPoint) {
+        // Normalize to base 100
+        dataPoint[fund.fundId] =
+          (Number(navPoint.nav) / initialValues[fund.fundId]) * 100;
+      }
     });
 
-    return chartData.sort((a, b) => a.date.localeCompare(b.date));
-  }, [data]);
+    return dataPoint;
+  });
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Performance Comparison (Base: 100)</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="h-[400px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={normalizedData}>
-              <XAxis
-                dataKey="date"
-                tickFormatter={(date) => new Date(date).toLocaleDateString()}
-              />
-              <YAxis tickFormatter={(value) => `${value.toFixed(0)}`} />
-              <Tooltip
-                labelFormatter={(date) => new Date(date).toLocaleDateString()}
-                formatter={(value: number, name: string, props: any) => {
-                  const fundIndex = Number(name.replace("fund", ""));
-                  return [`${value.toFixed(2)}`, data[fundIndex].fundName];
-                }}
-              />
-              <Legend
-                formatter={(value, entry) => {
-                  const fundIndex = Number(value.replace("fund", ""));
-                  return data[fundIndex].fundName;
-                }}
-              />
-              {data.map((_, index) => (
-                <Line
-                  key={index}
-                  type="monotone"
-                  dataKey={`fund${index}`}
-                  stroke={COLORS[index]}
-                  dot={false}
-                  strokeWidth={2}
-                  connectNulls={true}
-                />
-              ))}
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="h-[400px] w-full">
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart data={chartData}>
+          <XAxis
+            dataKey="date"
+            tickFormatter={(date) => new Date(date).toLocaleDateString()}
+            tick={{ fontSize: 12 }}
+          />
+          <YAxis
+            domain={["auto", "auto"]}
+            tickFormatter={(value) => value.toFixed(0)}
+            tick={{ fontSize: 12 }}
+          />
+          <Tooltip
+            labelFormatter={(date) => new Date(date).toLocaleDateString()}
+            formatter={(value: number, name: string) => {
+              const fund = data.find((f) => f.fundId === name);
+              return [`${value.toFixed(2)}`, fund?.fundName || name];
+            }}
+          />
+          <Legend
+            formatter={(value) => {
+              const fund = data.find((f) => f.fundId === value);
+              return fund?.fundName || value;
+            }}
+          />
+          {data.map((fund, index) => (
+            <Line
+              key={fund.fundId}
+              type="monotone"
+              dataKey={fund.fundId}
+              stroke={CHART_COLORS[index]}
+              dot={false}
+              name={fund.fundId}
+              strokeWidth={2}
+              connectNulls={true}
+            />
+          ))}
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
   );
 }

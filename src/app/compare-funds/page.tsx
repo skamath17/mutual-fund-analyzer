@@ -3,9 +3,11 @@
 
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
 import { FundSearch } from "@/components/FundSearch";
 import { getApiUrl } from "@/lib/utils/api";
-import { X } from "lucide-react";
+import { X, AlertCircle } from "lucide-react";
 import { ComparisonResults } from "@/components/comparison/ComparisonResults";
 
 interface Fund {
@@ -15,26 +17,74 @@ interface Fund {
   category: { name: string };
 }
 
+type Period = "1Y" | "3Y" | "5Y";
+
+interface ReturnMetrics {
+  absoluteReturn: number;
+  annualizedReturn: number;
+  startDate: Date;
+  endDate: Date;
+  startNAV: number;
+  endNAV: number;
+}
+
+interface ComparisonMetrics {
+  returns: {
+    [key in Period]: ReturnMetrics;
+  };
+  volatility: {
+    standardDeviation: number;
+    sharpeRatio: number;
+  };
+  holdings: Array<{
+    companyName: string;
+    percentage: number;
+    sector?: string;
+  }>;
+}
+
+interface ComparisonData {
+  fundId: string;
+  fundName: string;
+  fundHouse: string;
+  category: string;
+  metrics: ComparisonMetrics;
+  navHistory: Array<{ date: Date; nav: number }>;
+}
+
 export default function CompareFunds() {
   const [selectedFunds, setSelectedFunds] = useState<Fund[]>([]);
-  const [comparisonData, setComparisonData] = useState(null);
+  const [comparisonData, setComparisonData] = useState<ComparisonData[] | null>(
+    null
+  );
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSelectFund = (fund: Fund) => {
-    if (!selectedFunds.find((f) => f.id === fund.id)) {
-      if (selectedFunds.length < 3) {
-        // Limit to 3 funds
-        setSelectedFunds([...selectedFunds, fund]);
-      }
+    setError(null);
+    if (selectedFunds.find((f) => f.id === fund.id)) {
+      setError("This fund is already selected");
+      return;
     }
+
+    if (selectedFunds.length >= 3) {
+      setError("Maximum 3 funds can be compared at once");
+      return;
+    }
+
+    setSelectedFunds([...selectedFunds, fund]);
   };
 
   const handleRemoveFund = (fundId: string) => {
     setSelectedFunds(selectedFunds.filter((f) => f.id !== fundId));
+    setComparisonData(null);
+    setError(null);
   };
 
   const handleCompare = async () => {
     setIsLoading(true);
+    setError(null);
+
     try {
       const response = await fetch(getApiUrl("/api/funds/compare"), {
         method: "POST",
@@ -47,12 +97,13 @@ export default function CompareFunds() {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to compare funds");
+        throw new Error(response.statusText);
       }
 
       const result = await response.json();
       setComparisonData(result.data);
     } catch (error) {
+      setError("Failed to compare funds. Please try again.");
       console.error("Error comparing funds:", error);
     } finally {
       setIsLoading(false);
@@ -60,8 +111,8 @@ export default function CompareFunds() {
   };
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-6">Compare Mutual Funds</h1>
+    <div className="container mx-auto p-4 space-y-6">
+      <h1 className="text-2xl font-bold">Compare Mutual Funds</h1>
 
       <Card>
         <CardHeader>
@@ -69,6 +120,14 @@ export default function CompareFunds() {
         </CardHeader>
         <CardContent>
           <FundSearch onSelectFund={handleSelectFund} />
+
+          {error && (
+            <Alert variant="destructive" className="mt-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
           <div className="mt-4 text-sm text-gray-500">
             {selectedFunds.length < 3
               ? `Select up to ${3 - selectedFunds.length} more funds to compare`
@@ -77,17 +136,17 @@ export default function CompareFunds() {
         </CardContent>
       </Card>
 
-      <div className="mt-6">
+      {selectedFunds.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>Selected Funds</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {selectedFunds.map((fund) => (
+            <div className="space-y-3">
+              {selectedFunds.map((fund, index) => (
                 <div
                   key={fund.id}
-                  className="flex justify-between items-center p-4 bg-gray-50 rounded-lg"
+                  className="flex justify-between items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
                 >
                   <div className="flex-grow">
                     <div className="font-medium">{fund.schemeName}</div>
@@ -97,21 +156,21 @@ export default function CompareFunds() {
                   </div>
                   <button
                     onClick={() => handleRemoveFund(fund.id)}
-                    className="p-1 hover:bg-gray-200 rounded-full"
+                    className="p-2 hover:bg-gray-200 rounded-full transition-colors"
                   >
-                    <X size={20} className="text-gray-500" />
+                    <X size={18} className="text-gray-500" />
                   </button>
                 </div>
               ))}
             </div>
           </CardContent>
         </Card>
-      </div>
+      )}
 
       {selectedFunds.length >= 2 && (
-        <div className="mt-6 flex justify-center">
+        <div className="flex justify-center">
           <button
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            className="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
             onClick={handleCompare}
             disabled={isLoading}
           >
@@ -120,8 +179,19 @@ export default function CompareFunds() {
         </div>
       )}
 
-      {/* Comparison Results */}
-      {comparisonData && (
+      {isLoading && (
+        <Card>
+          <CardContent className="p-6">
+            <div className="space-y-4">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-4 w-1/2" />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {comparisonData && !isLoading && (
         <div className="mt-8">
           <ComparisonResults data={comparisonData} />
         </div>
