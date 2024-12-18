@@ -13,7 +13,6 @@ import {
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
-// Keep existing ComparisonData interface
 interface ComparisonData {
   fundId: string;
   fundName: string;
@@ -22,7 +21,6 @@ interface ComparisonData {
   navHistory: Array<{ date: Date; nav: number }>;
 }
 
-// Add Period type
 type Period = "1Y" | "3Y" | "5Y";
 
 interface PerformanceChartProps {
@@ -31,6 +29,40 @@ interface PerformanceChartProps {
 }
 
 const CHART_COLORS = ["#2563eb", "#dc2626", "#16a34a"];
+
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
+        <p className="text-sm text-gray-600 mb-2">
+          {new Date(label).toLocaleDateString()}
+        </p>
+        {payload.map((entry: any, index: number) => {
+          const value = entry.value;
+          const percentageChange = ((value - 100) / 100) * 100;
+          const isPositive = percentageChange >= 0;
+
+          return (
+            <div key={`item-${index}`} className="mb-1 last:mb-0">
+              <span style={{ color: entry.color }} className="font-medium">
+                {entry.name}: {value.toFixed(2)}
+              </span>
+              <span
+                className={`ml-2 ${
+                  isPositive ? "text-green-600" : "text-red-600"
+                }`}
+              >
+                ({isPositive ? "+" : ""}
+                {percentageChange.toFixed(2)}%)
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+  return null;
+};
 
 export function PerformanceChart({
   data,
@@ -111,13 +143,7 @@ export function PerformanceChart({
             tickFormatter={(value) => value.toFixed(0)}
             tick={{ fontSize: 12 }}
           />
-          <Tooltip
-            labelFormatter={(date) => new Date(date).toLocaleDateString()}
-            formatter={(value: number, name: string) => {
-              const fund = data.find((f) => f.fundId === name);
-              return [`${value.toFixed(2)}`, fund?.fundName || name];
-            }}
-          />
+          <Tooltip content={<CustomTooltip />} />
           <Legend
             formatter={(value) => {
               const fund = data.find((f) => f.fundId === value);
@@ -131,7 +157,7 @@ export function PerformanceChart({
               dataKey={fund.fundId}
               stroke={CHART_COLORS[index]}
               dot={false}
-              name={fund.fundId}
+              name={fund.fundName}
               strokeWidth={2}
               connectNulls={true}
             />
