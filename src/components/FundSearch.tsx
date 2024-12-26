@@ -4,16 +4,11 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { getApiUrl } from "@/lib/utils/api";
-
-interface Fund {
-  id: string;
-  schemeName: string;
-  fundHouse: { name: string };
-  category: { name: string };
-}
+import debounce from "lodash/debounce";
+import type { Fund, SelectedFund } from "@/lib/types/funds";
 
 interface FundSearchProps {
-  onSelectFund: (fund: Fund) => void;
+  onSelectFund: (fund: SelectedFund) => void; // Changed to SelectedFund
 }
 
 export function FundSearch({ onSelectFund }: FundSearchProps) {
@@ -34,7 +29,7 @@ export function FundSearch({ onSelectFund }: FundSearchProps) {
       );
       if (!response.ok) throw new Error("Failed to search funds");
       const data = await response.json();
-      setResults(data);
+      setResults(data.funds || []);
     } catch (error) {
       console.error("Error searching funds:", error);
       setResults([]);
@@ -44,11 +39,24 @@ export function FundSearch({ onSelectFund }: FundSearchProps) {
   };
 
   const handleSelectFund = (fund: Fund) => {
-    onSelectFund(fund);
-    // Clear search input and results
+    // Transform Fund to SelectedFund
+    const selectedFund: SelectedFund = {
+      schemeCode: fund.schemeCode,
+      schemeName: fund.basicInfo.schemeName,
+      fundHouse: {
+        name: fund.basicInfo.fundHouse,
+      },
+      category: {
+        name: fund.basicInfo.category,
+      },
+    };
+
+    onSelectFund(selectedFund);
     setQuery("");
     setResults([]);
   };
+
+  const debouncedSearch = debounce(searchFunds, 300);
 
   return (
     <div className="space-y-4">
@@ -58,22 +66,24 @@ export function FundSearch({ onSelectFund }: FundSearchProps) {
         value={query}
         onChange={(e) => {
           setQuery(e.target.value);
-          searchFunds(e.target.value);
+          debouncedSearch(e.target.value);
         }}
       />
 
-      {isLoading && <div>Searching...</div>}
+      {isLoading && (
+        <div className="p-4 text-center text-gray-500">Searching...</div>
+      )}
 
       <div className="space-y-2">
         {results.map((fund) => (
           <div
-            key={fund.id}
+            key={fund.schemeCode}
             className="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer"
             onClick={() => handleSelectFund(fund)}
           >
-            <div className="font-medium">{fund.schemeName}</div>
+            <div className="font-medium">{fund.basicInfo.schemeName}</div>
             <div className="text-sm text-gray-500">
-              {fund.fundHouse.name} • {fund.category.name}
+              {fund.basicInfo.fundHouse} • {fund.basicInfo.category}
             </div>
           </div>
         ))}

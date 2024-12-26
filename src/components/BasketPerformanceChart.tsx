@@ -26,63 +26,60 @@ export default function BasketPerformanceCharts({
   navHistory,
   niftyHistory,
 }: BasketPerformanceChartProps) {
+  if (!navHistory?.length) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Performance Comparison (Base 100)</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center p-4 text-gray-500">
+            No performance data available
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Sort both histories by date to ensure first value is the earliest
+  const sortedBasketHistory = [...navHistory].sort(
+    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+  );
+  const sortedNiftyHistory = [...(niftyHistory || [])].sort(
+    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+  );
+
   // Get initial values for normalization
-  const initialBasketValue = navHistory[0]?.nav || 100;
-  const initialNiftyValue = niftyHistory[0]?.nav || 100;
+  const firstBasketValue = sortedBasketHistory[0].nav;
+  const firstNiftyValue = sortedNiftyHistory[0]?.nav;
 
-  // Combine and transform the data for the chart
-  const data = navHistory.map((item) => {
-    const basketDate = new Date(item.date).toISOString().split("T")[0];
+  // Create normalized data points
+  const data = sortedBasketHistory.map((basketPoint) => {
+    const basketDate = new Date(basketPoint.date).toISOString().split("T")[0];
 
-    const niftyPoint = niftyHistory.find((n) => {
-      const niftyDate = new Date(n.date).toISOString().split("T")[0];
-      return niftyDate === basketDate;
-    });
+    // Find matching Nifty point
+    const niftyPoint = sortedNiftyHistory.find(
+      (n) => new Date(n.date).toISOString().split("T")[0] === basketDate
+    );
 
     return {
       date: basketDate,
-      // Normalize both values to start from 100
-      basket: (Number(item.nav) / initialBasketValue) * 100,
-      nifty: niftyPoint
-        ? (Number(niftyPoint.nav) / initialNiftyValue) * 100
-        : null,
+      basket: (basketPoint.nav / firstBasketValue) * 100,
+      nifty:
+        niftyPoint && firstNiftyValue
+          ? (niftyPoint.nav / firstNiftyValue) * 100
+          : null,
     };
   });
 
-  console.log("Transformed Data First 5 Points:", data.slice(0, 5));
-
-  /*const data = [
-    {
-      date: "2023-12-01",
-      basket: 100,
-      nifty: 100,
-    },
-    {
-      date: "2023-12-02",
-      basket: 102,
-      nifty: 101,
-    },
-    {
-      date: "2023-12-03",
-      basket: 105,
-      nifty: 103,
-    },
-    {
-      date: "2023-12-04",
-      basket: 103,
-      nifty: 102,
-    },
-    {
-      date: "2023-12-05",
-      basket: 106,
-      nifty: 104,
-    },
-  ];*/
+  console.log("First basket value:", firstBasketValue);
+  console.log("First nifty value:", firstNiftyValue);
+  console.log("Sample data points:", data.slice(0, 3));
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Relative Performance (Base 100)</CardTitle>
+        <CardTitle>Performance Comparison (Base 100)</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="h-[400px] w-full">
@@ -94,13 +91,16 @@ export default function BasketPerformanceCharts({
                 tick={{ fontSize: 12 }}
               />
               <YAxis
-                domain={["auto", "auto"]}
+                domain={["dataMin - 5", "dataMax + 5"]}
                 tickFormatter={(value) => value.toFixed(0)}
                 tick={{ fontSize: 12 }}
               />
               <Tooltip
                 labelFormatter={(date) => new Date(date).toLocaleDateString()}
-                formatter={(value: number) => [`${value.toFixed(2)}`, "Value"]}
+                formatter={(value: number, name: string) => [
+                  `${value.toFixed(2)}`,
+                  name,
+                ]}
               />
               <Legend />
               <Line
@@ -108,19 +108,21 @@ export default function BasketPerformanceCharts({
                 dataKey="basket"
                 stroke="#2563eb"
                 dot={false}
-                name="Basket"
+                name="Your Basket"
                 strokeWidth={2}
                 connectNulls={true}
               />
-              <Line
-                type="monotone"
-                dataKey="nifty"
-                stroke="#dc2626"
-                dot={false}
-                name="Nifty 50"
-                strokeWidth={2}
-                connectNulls={true}
-              />
+              {niftyHistory?.length > 0 && (
+                <Line
+                  type="monotone"
+                  dataKey="nifty"
+                  stroke="#dc2626"
+                  dot={false}
+                  name="Nifty 50"
+                  strokeWidth={2}
+                  connectNulls={true}
+                />
+              )}
             </LineChart>
           </ResponsiveContainer>
         </div>

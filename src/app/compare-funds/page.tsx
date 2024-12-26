@@ -9,60 +9,23 @@ import { FundSearch } from "@/components/FundSearch";
 import { getApiUrl } from "@/lib/utils/api";
 import { X, AlertCircle } from "lucide-react";
 import { ComparisonResults } from "@/components/comparison/ComparisonResults";
-
-interface Fund {
-  id: string;
-  schemeName: string;
-  fundHouse: { name: string };
-  category: { name: string };
-}
-
-type Period = "1Y" | "3Y" | "5Y";
-
-interface ReturnMetrics {
-  absoluteReturn: number;
-  annualizedReturn: number;
-  startDate: Date;
-  endDate: Date;
-  startNAV: number;
-  endNAV: number;
-}
-
-interface ComparisonMetrics {
-  returns: {
-    [key in Period]: ReturnMetrics;
-  };
-  volatility: {
-    standardDeviation: number;
-    sharpeRatio: number;
-  };
-  holdings: Array<{
-    companyName: string;
-    percentage: number;
-    sector?: string;
-  }>;
-}
-
-interface ComparisonData {
-  fundId: string;
-  fundName: string;
-  fundHouse: string;
-  category: string;
-  metrics: ComparisonMetrics;
-  navHistory: Array<{ date: Date; nav: number }>;
-}
+import type {
+  SelectedFund,
+  ComparisonData,
+  ComparisonMetrics,
+} from "@/lib/types/funds";
 
 export default function CompareFunds() {
-  const [selectedFunds, setSelectedFunds] = useState<Fund[]>([]);
+  const [selectedFunds, setSelectedFunds] = useState<SelectedFund[]>([]);
   const [comparisonData, setComparisonData] = useState<ComparisonData[] | null>(
     null
   );
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSelectFund = (fund: Fund) => {
+  const handleSelectFund = (fund: SelectedFund) => {
     setError(null);
-    if (selectedFunds.find((f) => f.id === fund.id)) {
+    if (selectedFunds.find((f) => f.schemeCode === fund.schemeCode)) {
       setError("This fund is already selected");
       return;
     }
@@ -75,8 +38,8 @@ export default function CompareFunds() {
     setSelectedFunds([...selectedFunds, fund]);
   };
 
-  const handleRemoveFund = (fundId: string) => {
-    setSelectedFunds(selectedFunds.filter((f) => f.id !== fundId));
+  const handleRemoveFund = (schemeCode: string) => {
+    setSelectedFunds(selectedFunds.filter((f) => f.schemeCode !== schemeCode));
     setComparisonData(null);
     setError(null);
   };
@@ -92,7 +55,7 @@ export default function CompareFunds() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          fundIds: selectedFunds.map((fund) => fund.id),
+          fundIds: selectedFunds.map((fund) => fund.schemeCode), // Make sure this is schemeCode
         }),
       });
 
@@ -143,9 +106,9 @@ export default function CompareFunds() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {selectedFunds.map((fund, index) => (
+              {selectedFunds.map((fund) => (
                 <div
-                  key={fund.id}
+                  key={fund.schemeCode}
                   className="flex justify-between items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
                 >
                   <div className="flex-grow">
@@ -155,7 +118,7 @@ export default function CompareFunds() {
                     </div>
                   </div>
                   <button
-                    onClick={() => handleRemoveFund(fund.id)}
+                    onClick={() => handleRemoveFund(fund.schemeCode)}
                     className="p-2 hover:bg-gray-200 rounded-full transition-colors"
                   >
                     <X size={18} className="text-gray-500" />

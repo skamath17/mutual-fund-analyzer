@@ -8,22 +8,16 @@ import { Button } from "@/components/ui/button";
 import { getApiUrl } from "@/lib/utils/api";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import BasketPerformanceCharts from "@/components/BasketPerformanceChart";
+import { SelectedFund } from "@/lib/types/funds";
 
 type Period = "1Y" | "3Y" | "5Y";
-
-interface Fund {
-  id: string;
-  schemeName: string;
-  fundHouse: { name: string };
-  category: { name: string };
-}
 
 interface ChartData {
   date: Date;
   nav: number;
 }
 
-interface FundWithAllocation extends Fund {
+interface FundWithAllocation extends SelectedFund {
   allocation: number;
 }
 
@@ -47,6 +41,8 @@ export default function CreateBasket() {
   const handleTestBasket = async (period: Period = "1Y") => {
     setIsLoading(true);
     try {
+      console.log("Sending request with funds:", selectedFunds); // Debug log
+
       const response = await fetch(getApiUrl("/api/basket/test"), {
         method: "POST",
         headers: {
@@ -54,7 +50,7 @@ export default function CreateBasket() {
         },
         body: JSON.stringify({
           funds: selectedFunds.map((fund) => ({
-            fundId: fund.id,
+            fundId: fund.schemeCode,
             allocation: fund.allocation,
           })),
           period,
@@ -62,18 +58,30 @@ export default function CreateBasket() {
       });
 
       const data = await response.json();
-      setMetrics(data.metrics);
-      setBasketNavHistory(data.navHistory);
-      setNiftyHistory(data.niftyHistory);
-      setShowResults(true);
-      setSelectedPeriod(period);
+      console.log("Received response:", data); // Debug log
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to analyze basket");
+      }
+
+      if (data.status === "success" && data.data) {
+        setMetrics(data.data.metrics);
+        setBasketNavHistory(data.data.navHistory);
+        setNiftyHistory(data.data.niftyHistory);
+        setShowResults(true);
+        setSelectedPeriod(period);
+      } else {
+        console.error("Invalid response format:", data);
+        throw new Error("Invalid response from server");
+      }
     } catch (error) {
       console.error("Error testing basket:", error);
+      // Add error state and display to user
+      setShowResults(false);
     } finally {
       setIsLoading(false);
     }
   };
-
   const handlePeriodChange = (period: Period) => {
     setSelectedPeriod(period);
     handleTestBasket(period);
@@ -107,15 +115,25 @@ export default function CreateBasket() {
     }
   };
 
-  const handleSelectFund = (fund: Fund) => {
-    if (!selectedFunds.find((f) => f.id === fund.id)) {
-      const newFunds = [...selectedFunds, { ...fund, allocation: 0 }];
+  const handleSelectFund = (fund: SelectedFund) => {
+    // Change type to SelectedFund
+    if (!selectedFunds.find((f) => f.schemeCode === fund.schemeCode)) {
+      // Change id to schemeCode
+      const newFunds = [
+        ...selectedFunds,
+        {
+          ...fund,
+          allocation: 0,
+        },
+      ];
       setSelectedFunds(recalculateAllocations(newFunds));
     }
   };
 
-  const handleRemoveFund = (fundId: string) => {
-    const newFunds = selectedFunds.filter((f) => f.id !== fundId);
+  // Update handleRemoveFund function
+  const handleRemoveFund = (schemeCode: string) => {
+    // Change parameter name to schemeCode
+    const newFunds = selectedFunds.filter((f) => f.schemeCode !== schemeCode); // Change id to schemeCode
     setSelectedFunds(recalculateAllocations(newFunds));
   };
 
@@ -150,7 +168,7 @@ export default function CreateBasket() {
             <div className="space-y-4">
               {selectedFunds.map((fund) => (
                 <div
-                  key={fund.id}
+                  key={fund.schemeCode}
                   className="flex justify-between items-center p-4 bg-gray-50 rounded-lg"
                 >
                   <div className="flex-grow">
@@ -163,7 +181,7 @@ export default function CreateBasket() {
                     {fund.allocation}%
                   </div>
                   <button
-                    onClick={() => handleRemoveFund(fund.id)}
+                    onClick={() => handleRemoveFund(fund.schemeCode)}
                     className="p-1 hover:bg-gray-200 rounded-full"
                   >
                     <X size={20} className="text-gray-500" />
