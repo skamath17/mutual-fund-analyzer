@@ -18,31 +18,7 @@ import {
   ArrowDownRight,
 } from "lucide-react";
 import Link from "next/link";
-import { getApiUrl } from "@/lib/utils/api";
-
-interface Fund {
-  schemeCode: string;
-  basicInfo: {
-    schemeName: string;
-    fundHouse: string;
-    category: string;
-    riskLevel: "VERY_LOW" | "LOW" | "MODERATE" | "HIGH" | "VERY_HIGH";
-  };
-  metrics: {
-    latestNav: number;
-    returns: {
-      "1Y"?: ReturnMetrics;
-      "3Y"?: ReturnMetrics;
-      "5Y"?: ReturnMetrics;
-    };
-  };
-}
-
-interface ReturnMetrics {
-  absoluteReturn: number;
-  annualizedReturn: number;
-  insufficientData?: boolean;
-}
+import type { Fund } from "@/lib/types/funds";
 
 interface SearchFilters {
   category: string;
@@ -63,8 +39,6 @@ export default function SearchPage() {
   const handleSearch = async () => {
     setIsLoading(true);
     try {
-      console.log("Making search request with term:", searchTerm);
-
       const searchParams = new URLSearchParams({
         query: searchTerm,
       });
@@ -75,12 +49,13 @@ export default function SearchPage() {
       if (filters.minReturn)
         searchParams.append("minReturn", filters.minReturn);
 
-      console.log(getApiUrl(`/api/funds/search?${searchParams.toString()}`));
       const response = await fetch(
-        getApiUrl(`/api/funds/search?${searchParams.toString()}`)
+        `/api/funds/search?${searchParams.toString()}`
       );
+      if (!response.ok) throw new Error("Search failed");
+
       const data = await response.json();
-      setFunds(data.funds);
+      setFunds(data.funds || []);
     } catch (error) {
       console.error("Error searching funds:", error);
     } finally {
@@ -88,25 +63,10 @@ export default function SearchPage() {
     }
   };
 
-  const formatReturn = (returnData?: ReturnMetrics) => {
-    if (!returnData || returnData.insufficientData) return "N/A";
-    return `${
-      returnData.absoluteReturn >= 0 ? "+" : ""
-    }${returnData.absoluteReturn.toFixed(2)}%`;
-  };
-
-  const getReturnClass = (returnData?: ReturnMetrics) => {
-    if (!returnData || returnData.insufficientData) {
-      return "text-gray-500"; // Default color for NA/insufficient data
-    }
-    return returnData.absoluteReturn >= 0 ? "text-green-600" : "text-red-600";
-  };
-
   return (
     <div className="container mx-auto p-4 space-y-6">
-      <h1 className="text-2xl font-bold">Find Mutual Funds</h1>
+      <h1 className="text-2xl font-bold">Search Mutual Funds</h1>
 
-      {/* Search and Filter Section */}
       <Card>
         <CardContent className="p-6 space-y-4">
           <div className="flex gap-4">
@@ -116,6 +76,9 @@ export default function SearchPage() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleSearch();
+                }}
               />
             </div>
             <Button onClick={handleSearch} disabled={isLoading}>
@@ -135,11 +98,14 @@ export default function SearchPage() {
                 <SelectValue placeholder="Category" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="LARGE_CAP">Large Cap</SelectItem>
-                <SelectItem value="MID_CAP">Mid Cap</SelectItem>
-                <SelectItem value="SMALL_CAP">Small Cap</SelectItem>
+                <SelectItem value="LARGE CAP">Large Cap</SelectItem>
+                <SelectItem value="MID CAP">Mid Cap</SelectItem>
+                <SelectItem value="SMALL CAP">Small Cap</SelectItem>
+                <SelectItem value="MULTI CAP">Multi Cap</SelectItem>
+                <SelectItem value="FLEXI CAP">Flexi Cap</SelectItem>
+                <SelectItem value="ELSS">ELSS</SelectItem>
                 <SelectItem value="HYBRID">Hybrid</SelectItem>
-                <SelectItem value="DEBT">Debt</SelectItem>
+                <SelectItem value="INDEX">Index</SelectItem>
               </SelectContent>
             </Select>
 
@@ -181,7 +147,6 @@ export default function SearchPage() {
         </CardContent>
       </Card>
 
-      {/* Results Section */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {funds.map((fund) => (
           <Link key={fund.schemeCode} href={`/fund/${fund.schemeCode}`}>
@@ -197,31 +162,6 @@ export default function SearchPage() {
                         {fund.basicInfo.fundHouse}
                       </p>
                     </div>
-                    <div className="text-right">
-                      <div className="font-medium">
-                        ₹{fund.metrics.latestNav.toFixed(2)}
-                      </div>
-                      <div
-                        className={`flex items-center ${getReturnClass(
-                          fund.metrics.returns["1Y"]
-                        )}`}
-                      >
-                        {fund.metrics.returns["1Y"] &&
-                          !fund.metrics.returns["1Y"].insufficientData && (
-                            <>
-                              {fund.metrics.returns["1Y"].absoluteReturn >=
-                              0 ? (
-                                <ArrowUpRight className="w-4 h-4" />
-                              ) : (
-                                <ArrowDownRight className="w-4 h-4" />
-                              )}
-                            </>
-                          )}
-                        <span className="ml-1">
-                          {formatReturn(fund.metrics.returns["1Y"])}
-                        </span>
-                      </div>
-                    </div>
                   </div>
 
                   <div className="flex justify-between text-sm">
@@ -232,21 +172,6 @@ export default function SearchPage() {
                     <div>
                       <span className="text-gray-600">Risk: </span>
                       {fund.basicInfo.riskLevel}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-2 text-sm border-t pt-2">
-                    <div>
-                      <div className="text-gray-600">1Y Returns</div>
-                      <div>{formatReturn(fund.metrics.returns["1Y"])}</div>
-                    </div>
-                    <div>
-                      <div className="text-gray-600">3Y Returns</div>
-                      <div>{formatReturn(fund.metrics.returns["3Y"])}</div>
-                    </div>
-                    <div>
-                      <div className="text-gray-600">5Y Returns</div>
-                      <div>{formatReturn(fund.metrics.returns["5Y"])}</div>
                     </div>
                   </div>
                 </div>
