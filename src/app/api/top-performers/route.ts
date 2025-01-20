@@ -2,10 +2,21 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { calculateDetailedReturns } from "@/lib/calculations/returns";
+import { NextRequest } from "next/server";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const categoryType = searchParams.get("type") || "equity"; // Default to equity
+
     const funds = await prisma.mutualFund.findMany({
+      where: {
+        category: {
+          name: {
+            contains: categoryType === "equity" ? "Equity" : "Hybrid",
+          },
+        },
+      },
       include: {
         fundHouse: true,
         category: true,
@@ -31,7 +42,7 @@ export async function GET() {
           fundId: fund.id,
           fundHouseName: fund.fundHouse.name,
           categoryName: fund.category.name,
-          schemeName: fund.schemeName, // Add this
+          schemeName: fund.schemeName,
           schemeCode: fund.schemeCode,
           returns: returns.absoluteReturn,
         };
@@ -43,9 +54,9 @@ export async function GET() {
 
     return NextResponse.json({
       fundName: `${topPerformer.fundHouseName} - ${topPerformer.categoryName}`,
-      schemeName: topPerformer.schemeName, // Include in response
+      schemeName: topPerformer.schemeName,
       schemeCode: topPerformer.schemeCode,
-      fundHouse: topPerformer.fundHouseName, // Include fund house separately
+      fundHouse: topPerformer.fundHouseName,
       returns: topPerformer.returns,
     });
   } catch (error) {

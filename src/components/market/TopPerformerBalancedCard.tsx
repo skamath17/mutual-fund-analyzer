@@ -11,7 +11,7 @@ interface TopPerformerProps {
   period: string;
 }
 
-export function TopPerformerCard({
+export function TopPerformerBalancedCard({
   schemeName,
   schemeCode,
   returnPercentage,
@@ -22,7 +22,7 @@ export function TopPerformerCard({
       <Card className="hover:shadow-lg transition-shadow cursor-pointer">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium">
-            Top Performer (Equity)
+            Top Performer (Balanced)
           </CardTitle>
         </CardHeader>
         <CardContent>

@@ -4,52 +4,56 @@ import prisma from "@/lib/prisma";
 
 export async function GET() {
   try {
-    const niftyIndex = await prisma.marketIndex.findFirst({
-      where: {
-        code: "^NSEI",
-      },
-    });
+    // Fetch all market indexes
+    const marketIndexes = await prisma.marketIndex.findMany();
 
-    if (!niftyIndex) {
-      throw new Error("Nifty 50 index not found");
+    if (!marketIndexes || marketIndexes.length === 0) {
+      throw new Error("No market indexes found");
     }
 
-    const rawData = await prisma.indexHistory.findMany({
-      where: {
-        indexId: niftyIndex.id,
-      },
-      orderBy: {
-        date: "desc",
-      },
-      take: 30,
-    });
+    // Fetch the latest close value and change percentage for each index
+    const indexData = await Promise.all(
+      marketIndexes.map(async (index) => {
+        const rawData = await prisma.indexHistory.findMany({
+          where: {
+            indexId: index.id,
+          },
+          orderBy: {
+            date: "desc",
+          },
+          take: 2, // Fetch the last two records to calculate change percentage
+        });
 
-    // Convert BigInt to number and format the data
-    const data = rawData.map((item) => ({
-      ...item,
-      volume: item.volume ? Number(item.volume) : null,
-      // Also convert Decimal to number if needed
-      open: Number(item.open),
-      high: Number(item.high),
-      low: Number(item.low),
-      close: Number(item.close),
-    }));
+        if (rawData.length < 2) {
+          return {
+            id: index.id,
+            name: index.name,
+            value: null,
+            change: null,
+          };
+        }
 
-    const currentValue = data[0]?.close;
-    const previousValue = data[1]?.close;
-    const changePercentage = previousValue
-      ? ((currentValue - previousValue) / previousValue) * 100
-      : null;
+        const currentValue = Number(rawData[0].close);
+        const previousValue = Number(rawData[1].close);
+        const changePercentage =
+          previousValue !== 0
+            ? ((currentValue - previousValue) / previousValue) * 100
+            : 0;
 
-    return NextResponse.json({
-      data,
-      currentValue,
-      changePercentage,
-    });
+        return {
+          id: index.id,
+          name: index.name,
+          value: currentValue.toFixed(2), // Format the value to 2 decimal places
+          change: changePercentage.toFixed(2), // Format the percentage
+        };
+      })
+    );
+
+    return NextResponse.json(indexData);
   } catch (error) {
     console.error("Error fetching market trend:", error);
     return NextResponse.json(
-      { error: "Failed to fetch market trend" },
+      { error: "Failed to fetch market indexes" },
       { status: 500 }
     );
   }

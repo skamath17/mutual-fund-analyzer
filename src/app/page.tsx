@@ -17,52 +17,11 @@ import {
 export default function HomePage() {
   return (
     <div className="container mx-auto p-4 space-y-6">
-      {/* Quick Actions Section */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Link href="/search">
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-            <CardContent className="flex items-center space-x-4 p-6">
-              <Search className="w-8 h-8 text-primary" />
-              <div>
-                <h3 className="font-semibold text-lg">Find Funds</h3>
-                <p className="text-sm text-gray-600">
-                  Search and compare mutual funds
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </Link>
-        <Link href="/portfolio">
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-            <CardContent className="flex items-center space-x-4 p-6">
-              <PieChart className="w-8 h-8 text-primary" />
-              <div>
-                <h3 className="font-semibold text-lg">My Portfolio</h3>
-                <p className="text-sm text-gray-600">Track your investments</p>
-              </div>
-            </CardContent>
-          </Card>
-        </Link>
-        <Link href="/analysis">
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-            <CardContent className="flex items-center space-x-4 p-6">
-              <LineChart className="w-8 h-8 text-primary" />
-              <div>
-                <h3 className="font-semibold text-lg">Analysis Tools</h3>
-                <p className="text-sm text-gray-600">
-                  Deep dive into fund metrics
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </Link>
-      </div>
-
       {/* Market Overview Section */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            <span>Market Overview</span>
+            <span>Top Performing Funds</span>
             <Link
               href="/market"
               className="text-sm text-primary hover:underline"
@@ -80,7 +39,7 @@ export default function HomePage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            <span>Top Performing Funds</span>
+            <span>Top Performing Indexes</span>
             <Link
               href="/funds"
               className="text-sm text-primary hover:underline"
