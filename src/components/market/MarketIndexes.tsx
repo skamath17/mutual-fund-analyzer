@@ -7,46 +7,69 @@ import { getApiUrl } from "@/lib/utils/api";
 
 export const dynamic = "force-dynamic";
 
-async function getTopPerformerEquity() {
-  const response = await fetch(getApiUrl("/api/top-indexes?type=equity"), {
-    next: { revalidate: 300 },
-  });
+// Helper function to handle fetch requests consistently
+async function fetchWithErrorHandling(url: string, errorMessage: string) {
+  try {
+    const response = await fetch(url, {
+      next: { revalidate: 300 },
+    });
 
-  if (!response.ok) {
-    throw new Error("Failed to fetch top equity index");
+    if (!response.ok) {
+      console.error(`${errorMessage}: ${response.status}`);
+      return null;
+    }
+    return response.json();
+  } catch (error) {
+    console.error(`${errorMessage}:`, error);
+    return null;
   }
-  return response.json();
+}
+
+async function getTopPerformerEquity() {
+  return fetchWithErrorHandling(
+    getApiUrl("/api/top-indexes?type=equity"),
+    "Failed to fetch top equity index"
+  );
 }
 
 async function getTopPerformerSector() {
-  const response = await fetch(getApiUrl("/api/top-indexes?type=sector"), {
-    next: { revalidate: 300 },
-  });
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch top sector index");
-  }
-  return response.json();
+  return fetchWithErrorHandling(
+    getApiUrl("/api/top-indexes?type=sector"),
+    "Failed to fetch top sectoral index"
+  );
 }
 
 async function getConsistentIndex() {
-  const response = await fetch(getApiUrl("/api/consistent-indexes"), {
-    next: { revalidate: 300 },
-  });
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch consistent index");
-  }
-  return response.json();
+  return fetchWithErrorHandling(
+    getApiUrl("/api/consistent-indexes"),
+    "Failed to fetch consistent index"
+  );
 }
 
 export async function MarketIndexes() {
+  // Use Promise.allSettled instead of Promise.all to handle partial failures
+  const results = await Promise.allSettled([
+    getTopPerformerEquity(),
+    getTopPerformerSector(),
+    getConsistentIndex(),
+  ]);
+
+  // Extract values from the settled promises, using null for rejected promises
   const [topPerformerEquity, topPerformerSector, mostConsistentIndex] =
-    await Promise.all([
-      getTopPerformerEquity(),
-      getTopPerformerSector(),
-      getConsistentIndex(),
-    ]);
+    results.map((result) =>
+      result.status === "fulfilled" ? result.value : null
+    );
+
+  // If all data fetching failed, show a user-friendly message
+  if (!topPerformerEquity && !topPerformerSector && !mostConsistentIndex) {
+    return (
+      <div className="p-4 text-center bg-gray-50 rounded-lg">
+        <p className="text-gray-600">
+          Market index data is temporarily unavailable. Please try again later.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -65,7 +88,7 @@ export async function MarketIndexes() {
       <ConsistentIndexCard
         id={mostConsistentIndex?.id ?? "N/A"}
         name={mostConsistentIndex?.name ?? "N/A"}
-        returnPercentage={mostConsistentIndex?.returns}
+        returnPercentage={mostConsistentIndex?.returns ?? 0}
         consistency={mostConsistentIndex?.consistency ?? "N/A"}
         period={mostConsistentIndex?.period ?? 0}
       />
