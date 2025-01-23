@@ -133,7 +133,7 @@ export async function POST(request: NextRequest) {
     // Fetch Nifty data
     const niftyIndex = await prisma.marketIndex.findFirst({
       where: {
-        code: "^NSEI",
+        code: "256265",
       },
       include: {
         history: {
