@@ -1,0 +1,4 @@
+# prisma/migrations/0_init/migration.toml
+applied_steps_count = 1
+database_name = "mutualfunddb"
+timestamp = 0
