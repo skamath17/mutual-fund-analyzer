@@ -81,11 +81,18 @@ model NAVHistory {
   @@index([fundId, date])
 }
 
+enum IndexType {
+  BROAD_BASED
+  SECTORAL
+  THEMATIC
+}
+
 model MarketIndex {
   id          String        @id @default(uuid())
   name        String        @unique  // e.g., "Nifty 50", "Bank Nifty"
   code        String        @unique  // e.g., "NIFTY", "BANKNIFTY"
   description String?       @db.Text
+  indexType   IndexType     @default(BROAD_BASED)  // Added this field
   history     IndexHistory[]
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt

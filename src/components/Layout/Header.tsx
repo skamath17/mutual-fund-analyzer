@@ -1,30 +1,81 @@
-// src/components/layout/Header.tsx
 "use client";
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-type MarketIndex = {
-  id: number;
+// First, let's define our TypeScript interfaces to match the API response
+interface MarketData {
+  symbol: string;
   name: string;
-  value: string;
+  lastPrice: number;
+  previousClose: number;
   change: string;
-};
+  dayHigh: number;
+  dayLow: number;
+  volume: number;
+  marketTime: string; // This will come as a string after JSON serialization
+}
 
 export function Header() {
-  const [marketIndexes, setMarketIndexes] = useState<MarketIndex[]>([]);
+  // Our state now uses the MarketData interface
+  const [marketIndexes, setMarketIndexes] = useState<MarketData[]>([]);
+  const [lastUpdate, setLastUpdate] = useState<string>("");
+  const [error, setError] = useState<string>("");
+
+  // This function handles the market data fetching
+  async function fetchMarketData() {
+    try {
+      const response = await fetch("/api/market-live");
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.details || "Failed to fetch market data");
+      }
+
+      const data: MarketData[] = await response.json();
+
+      // We format the numbers using the Indian numbering system
+      const formattedData = data.map((index) => ({
+        ...index,
+        lastPrice: Number(index.lastPrice.toFixed(2)), // Round to 2 decimal places
+      }));
+
+      setMarketIndexes(formattedData);
+      setLastUpdate(new Date().toLocaleTimeString("en-IN"));
+      setError(""); // Clear any previous errors
+    } catch (error) {
+      console.error("Failed to fetch market data:", error);
+      setError(
+        error instanceof Error ? error.message : "Failed to fetch market data"
+      );
+    }
+  }
 
   useEffect(() => {
-    async function fetchMarketIndexes() {
-      try {
-        const response = await fetch("/api/market-trend"); // Fetch market indexes from API
-        const data: MarketIndex[] = await response.json();
-        setMarketIndexes(data);
-      } catch (error) {
-        console.error("Failed to fetch market indexes:", error);
-      }
+    // This function checks if the market is currently open
+    function isMarketOpen() {
+      const now = new Date();
+      const day = now.getDay();
+      const hours = now.getHours();
+      const minutes = now.getMinutes();
+      const currentTime = hours * 100 + minutes;
+
+      // Markets are open Monday (1) through Friday (5)
+      // from 9:15 AM to 3:30 PM IST
+      return day >= 1 && day <= 5 && currentTime >= 915 && currentTime <= 1530;
     }
-    fetchMarketIndexes();
+
+    // Initial data fetch when component mounts
+    fetchMarketData();
+
+    // Set up the polling interval - every 5 minutes
+    const intervalId = setInterval(() => {
+      if (isMarketOpen()) {
+        fetchMarketData();
+      }
+    }, 5 * 60 * 1000); // 5 minutes in milliseconds
+
+    // Cleanup function to remove the interval when component unmounts
+    return () => clearInterval(intervalId);
   }, []);
 
   return (
@@ -49,28 +100,41 @@ export function Header() {
           </nav>
         </div>
 
-        {/* Market Index Ticker */}
+        {/* Market Index Ticker with Error Handling */}
         <div className="overflow-hidden whitespace-nowrap bg-gray-100 py-2">
-          <div className="animate-marquee inline-block">
-            {marketIndexes.map((index) => (
-              <span
-                key={index.id}
-                className="mx-4 text-sm font-medium text-gray-800"
-              >
-                {index.name}:
+          {error ? (
+            <div className="text-red-500 text-sm px-4">{error}</div>
+          ) : (
+            <div className="animate-marquee inline-block">
+              {marketIndexes.map((index) => (
                 <span
-                  className={`font-semibold ${
-                    parseFloat(index.change) >= 0
-                      ? "text-green-600"
-                      : "text-red-600"
-                  }`}
+                  key={index.symbol}
+                  className="mx-4 text-sm font-medium text-gray-800"
                 >
-                  {index.value} ({parseFloat(index.change) >= 0 ? "+" : ""}
-                  {index.change}%)
+                  {index.name}:{" "}
+                  <span
+                    className={`font-semibold ${
+                      parseFloat(index.change) >= 0
+                        ? "text-green-600"
+                        : "text-red-600"
+                    }`}
+                  >
+                    {/* Format the number using Indian locale */}₹
+                    {index.lastPrice.toLocaleString("en-IN")}{" "}
+                    <span className="text-xs">
+                      ({parseFloat(index.change) >= 0 ? "+" : ""}
+                      {index.change}%)
+                    </span>
+                  </span>
                 </span>
-              </span>
-            ))}
-          </div>
+              ))}
+              {lastUpdate && (
+                <span className="mx-4 text-xs text-gray-500">
+                  Last Updated: {lastUpdate}
+                </span>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </header>
