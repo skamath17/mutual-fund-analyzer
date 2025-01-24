@@ -120,7 +120,7 @@ export function ComparisonResults({
           <div className="grid grid-cols-4 gap-4">
             <div></div>
             {data.map((fund) => (
-              <div key={fund.fundId} className="font-medium">
+              <div key={fund.fundId} className="font-medium text-right">
                 {fund.fundName}
               </div>
             ))}
@@ -154,7 +154,7 @@ export function ComparisonResults({
           <div className="grid grid-cols-4 gap-4">
             <div></div>
             {data.map((fund) => (
-              <div key={fund.fundId} className="font-medium">
+              <div key={fund.fundId} className="font-medium text-right">
                 {fund.fundName}
               </div>
             ))}

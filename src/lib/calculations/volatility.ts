@@ -6,21 +6,22 @@ export function calculateVolatilityMetrics(
 ): VolatilityMetrics {
   validateNAVData(navHistory);
 
-  const orderedNavHistory = [...navHistory].reverse();
-
-  const dailyReturns = calculateDailyReturns(orderedNavHistory);
+  const dailyReturns = calculateDailyReturns(navHistory);
   const stdDev = calculateStandardDeviation(dailyReturns);
+  const annualizedStdDev = stdDev * Math.sqrt(252);
 
-  const annualizedStdDev = stdDev * Math.sqrt(252); // 252 trading days in a year
+  // Calculate returns the same way as in calculateReturns function
+  const latestNAV = navHistory[navHistory.length - 1].nav;
+  const initialNAV = navHistory[0].nav;
+  const totalReturn = (latestNAV - initialNAV) / initialNAV;
 
-  // Assuming risk-free rate of 6%
+  const years =
+    (navHistory[navHistory.length - 1].date.getTime() -
+      navHistory[0].date.getTime()) /
+    (365 * 24 * 60 * 60 * 1000);
+
+  const annualizedReturn = Math.pow(1 + totalReturn, 1 / years) - 1;
   const riskFreeRate = 0.06;
-  const dailyRiskFreeRate = Math.pow(1 + riskFreeRate, 1 / 252) - 1;
-
-  const averageDailyReturn =
-    dailyReturns.reduce((a, b) => a + b, 0) / dailyReturns.length;
-
-  const annualizedReturn = (1 + averageDailyReturn) ** 252 - 1;
 
   const sharpeRatio =
     annualizedStdDev !== 0

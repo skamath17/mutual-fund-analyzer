@@ -27,7 +27,7 @@ export function PerformanceChart({
     if (navHistory.length === 0) return [];
     const initialNav = navHistory[0].nav;
     return navHistory.map((point) => ({
-      date: new Date(point.date),
+      date: new Date(point.date).getTime(), // Convert to timestamp for Recharts
       nav: (point.nav / initialNav) * 100,
     }));
   };
@@ -53,10 +53,12 @@ export function PerformanceChart({
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis
             dataKey="date"
-            tickFormatter={(date) => new Date(date).toLocaleDateString()}
             type="number"
-            domain={["dataMin", "dataMax"]}
+            domain={["auto", "auto"]}
             scale="time"
+            tickFormatter={(timestamp) =>
+              new Date(timestamp).toLocaleDateString()
+            }
           />
           <YAxis
             label={{
@@ -79,6 +81,7 @@ export function PerformanceChart({
               dataKey="nav"
               name="Nifty 50"
               stroke="#666666"
+              strokeWidth={2}
               dot={false}
               strokeDasharray="5 5"
             />
@@ -88,11 +91,12 @@ export function PerformanceChart({
           {normalizedFunds.map((fund, index) => (
             <Line
               key={fund.fundId}
-              data={fund.navHistory}
+              data={fund.navHistory} // This should be an array of {date, nav} objects
               type="monotone"
               dataKey="nav"
               name={fund.fundName}
               stroke={getColorForIndex(index)}
+              strokeWidth={2}
               dot={false}
             />
           ))}

@@ -180,45 +180,62 @@ export async function POST(request: NextRequest) {
 function calculateCombinedNavHistory(
   funds: Array<{ allocation: number; navHistory: NAVData[] }>
 ): NAVData[] {
-  // If no funds, return empty array
   if (funds.length === 0) return [];
 
-  const allDates = new Set(
-    funds.flatMap((fund) => fund.navHistory.map((nh) => nh.date.toISOString()))
-  );
+  // Convert allocations to decimals and normalize
+  const totalAllocation = funds.reduce((sum, fund) => sum + fund.allocation, 0);
+  const normalizedFunds = funds.map((fund) => ({
+    ...fund,
+    allocation: fund.allocation / totalAllocation,
+  }));
 
-  const sortedDates = Array.from(allDates).sort((a: string, b: string) =>
-    a.localeCompare(b)
-  );
+  // Get all unique dates
+  const dateSet = new Set<string>();
+  normalizedFunds.forEach((fund) => {
+    fund.navHistory.forEach((nav) => {
+      dateSet.add(nav.date.toISOString().split("T")[0]);
+    });
+  });
 
-  const combinedHistory: NavPoint[] = [];
+  const sortedDates = Array.from(dateSet).sort();
+  const combinedHistory: NAVData[] = [];
+  let firstValidPoint = true;
+  let initialValue = 100; // Start with base value of 100
 
   for (const dateStr of sortedDates) {
-    const date = new Date(dateStr);
-    let combinedNav = 0;
+    let dailyNav = 0;
+    let allFundsHaveData = true;
 
     // Calculate weighted NAV for this date
-    for (const fund of funds) {
+    for (const fund of normalizedFunds) {
       const navPoint = fund.navHistory.find(
-        (nh) => nh.date.toISOString() === dateStr
+        (nav) => nav.date.toISOString().split("T")[0] === dateStr
       );
 
-      if (navPoint) {
-        // Add weighted NAV (NAV * allocation percentage)
-        combinedNav += navPoint.nav * (fund.allocation / 100);
+      if (!navPoint) {
+        allFundsHaveData = false;
+        break;
       }
+
+      dailyNav += navPoint.nav * (fund.allocation / 100);
     }
 
-    // Only add point if we have valid NAV
-    if (combinedNav > 0) {
+    // Only add point if we have data for all funds
+    if (allFundsHaveData) {
+      if (firstValidPoint) {
+        initialValue = dailyNav;
+        firstValidPoint = false;
+      }
+
+      // Normalize to base 100
       combinedHistory.push({
-        date,
-        nav: combinedNav,
+        date: new Date(dateStr),
+        nav: (dailyNav / initialValue) * 100,
       });
     }
   }
 
-  // Sort by date ascending
+  // Sort by date in ascending order (older to newer)
   return combinedHistory.sort((a, b) => a.date.getTime() - b.date.getTime());
 }
 
