@@ -2,13 +2,14 @@
 import { NextResponse } from "next/server";
 import yahooFinance from "yahoo-finance2";
 
+// Define the structure we expect from yahoo-finance2
 interface YahooQuoteResponse {
-  regularMarketPrice: number | null;
-  regularMarketPreviousClose: number | null;
-  regularMarketDayHigh: number | null;
-  regularMarketDayLow: number | null;
-  regularMarketVolume: number | null;
-  regularMarketTime: number | null;
+  regularMarketPrice?: number;
+  regularMarketPreviousClose?: number;
+  regularMarketDayHigh?: number;
+  regularMarketDayLow?: number;
+  regularMarketVolume?: number;
+  regularMarketTime?: number;
 }
 
 interface MarketData {
@@ -21,51 +22,107 @@ interface MarketData {
   dayLow: number;
   volume: number;
   marketTime: Date;
+  category: string;
 }
 
 export async function GET() {
   try {
-    const symbols = ["^NSEI", "^NSEBANK"];
+    const indexData = [
+      { symbol: "^NSEI", name: "NIFTY 50", category: "broad" },
+      { symbol: "^NSEBANK", name: "BANK NIFTY", category: "sectoral" },
+      { symbol: "^CNXIT", name: "NIFTY IT", category: "sectoral" },
+      { symbol: "^CNXAUTO", name: "NIFTY AUTO", category: "sectoral" },
+      { symbol: "^CNXPHARMA", name: "NIFTY PHARMA", category: "sectoral" },
+      { symbol: "^CNXFMCG", name: "NIFTY FMCG", category: "sectoral" },
+      { symbol: "NIFTYMIDCAP150.NS", name: "NIFTY MIDCAP", category: "broad" },
+      {
+        symbol: "NIFTYSMLCAP250.NS",
+        name: "NIFTY SMALLCAP",
+        category: "broad",
+      },
+    ];
 
     const marketData = await Promise.all(
-      symbols.map(async (symbol): Promise<MarketData> => {
-        // Fetch the quote data
-        const quote = await yahooFinance.quote(symbol);
+      indexData.map(async (index): Promise<MarketData> => {
+        try {
+          // Explicitly type the quote response
+          const quoteResponse = await Promise.race([
+            yahooFinance.quote(index.symbol),
+            new Promise<never>((_, reject) =>
+              setTimeout(
+                () => reject(new Error(`Timeout fetching ${index.symbol}`)),
+                5000
+              )
+            ),
+          ]);
 
-        // Ensure we have numeric values by providing defaults
-        const lastPrice = Number(quote.regularMarketPrice) || 0;
-        const previousClose =
-          Number(quote.regularMarketPreviousClose) || lastPrice;
+          // Type assertion to use our interface
+          const quote = quoteResponse as YahooQuoteResponse;
 
-        // Calculate the change percentage
-        const changePercent =
-          previousClose !== 0
-            ? ((lastPrice - previousClose) / previousClose) * 100
-            : 0;
+          // Ensure we have numeric values by providing defaults
+          const lastPrice =
+            typeof quote.regularMarketPrice === "number"
+              ? quote.regularMarketPrice
+              : 0;
+          const previousClose =
+            typeof quote.regularMarketPreviousClose === "number"
+              ? quote.regularMarketPreviousClose
+              : lastPrice;
 
-        // Handle the timestamp conversion safely
-        const timestamp = quote.regularMarketTime
-          ? Number(quote.regularMarketTime) * 1000 // Convert seconds to milliseconds
-          : Date.now(); // Use current time as fallback
+          // Calculate the change percentage
+          const changePercent =
+            previousClose !== 0
+              ? ((lastPrice - previousClose) / previousClose) * 100
+              : 0;
 
-        return {
-          symbol,
-          name: symbol === "^NSEI" ? "NIFTY 50" : "BANK NIFTY",
-          lastPrice,
-          previousClose,
-          change: changePercent.toFixed(2),
-          dayHigh: Number(quote.regularMarketDayHigh) || lastPrice,
-          dayLow: Number(quote.regularMarketDayLow) || lastPrice,
-          volume: Number(quote.regularMarketVolume) || 0,
-          marketTime: new Date(timestamp),
-        };
+          // Handle the timestamp conversion safely
+          const timestamp =
+            typeof quote.regularMarketTime === "number"
+              ? quote.regularMarketTime * 1000 // Convert seconds to milliseconds
+              : Date.now(); // Use current time as fallback
+
+          return {
+            symbol: index.symbol,
+            name: index.name,
+            lastPrice,
+            previousClose,
+            change: changePercent.toFixed(2),
+            dayHigh:
+              typeof quote.regularMarketDayHigh === "number"
+                ? quote.regularMarketDayHigh
+                : lastPrice,
+            dayLow:
+              typeof quote.regularMarketDayLow === "number"
+                ? quote.regularMarketDayLow
+                : lastPrice,
+            volume:
+              typeof quote.regularMarketVolume === "number"
+                ? quote.regularMarketVolume
+                : 0,
+            marketTime: new Date(timestamp),
+            category: index.category,
+          };
+        } catch (err) {
+          console.error(`Error fetching data for ${index.symbol}:`, err);
+          // Return a placeholder for failed fetches
+          return {
+            symbol: index.symbol,
+            name: index.name,
+            lastPrice: 0,
+            previousClose: 0,
+            change: "0.00",
+            dayHigh: 0,
+            dayLow: 0,
+            volume: 0,
+            marketTime: new Date(),
+            category: index.category,
+          };
+        }
       })
     );
 
-    // Validate the results
-    const validMarketData = marketData.filter(
-      (data) => data.lastPrice > 0 && data.previousClose > 0
-    );
+    // Filter out any failed fetches
+    const validMarketData = marketData.filter((data) => data.lastPrice > 0);
 
     if (validMarketData.length === 0) {
       throw new Error("No valid market data received");

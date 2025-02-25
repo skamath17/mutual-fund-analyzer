@@ -72,15 +72,45 @@ body {
 }
 
 @keyframes marquee {
-  from {
+  0% {
     transform: translateX(100%);
   }
-  to {
+  100% {
     transform: translateX(-100%);
   }
 }
 
 .animate-marquee {
   display: inline-block;
+  white-space: nowrap;
   animation: marquee 50s linear infinite;
+  padding-left: 100%;
+}
+.resizing {
+  cursor: col-resize !important;
+  user-select: none;
+}
+
+.ticker-container {
+  width: 100%;
+}
+
+.ticker-wrapper {
+  display: flex;
+  width: fit-content;
+  animation: ticker 30s linear infinite; /* Control speed here */
+}
+
+.ticker-item {
+  display: inline-flex;
+  white-space: nowrap;
+}
+
+@keyframes ticker {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
 }

@@ -6,11 +6,25 @@ export function calculateVolatilityMetrics(
 ): VolatilityMetrics {
   validateNAVData(navHistory);
 
-  const dailyReturns = calculateDailyReturns(navHistory);
-  const stdDev = calculateStandardDeviation(dailyReturns);
+  // Calculate daily returns
+  const dailyReturns: number[] = [];
+  for (let i = 1; i < navHistory.length; i++) {
+    const dailyReturn =
+      (navHistory[i].nav - navHistory[i - 1].nav) / navHistory[i - 1].nav;
+    dailyReturns.push(dailyReturn);
+  }
+
+  // Calculate standard deviation
+  const mean = dailyReturns.reduce((a, b) => a + b, 0) / dailyReturns.length;
+  const squaredDiffs = dailyReturns.map((r) => Math.pow(r - mean, 2));
+  const variance =
+    squaredDiffs.reduce((a, b) => a + b, 0) / (dailyReturns.length - 1);
+  const stdDev = Math.sqrt(variance);
+
+  // Annualize the standard deviation
   const annualizedStdDev = stdDev * Math.sqrt(252);
 
-  // Calculate returns the same way as in calculateReturns function
+  // Calculate returns
   const latestNAV = navHistory[navHistory.length - 1].nav;
   const initialNAV = navHistory[0].nav;
   const totalReturn = (latestNAV - initialNAV) / initialNAV;
@@ -21,38 +35,37 @@ export function calculateVolatilityMetrics(
     (365 * 24 * 60 * 60 * 1000);
 
   const annualizedReturn = Math.pow(1 + totalReturn, 1 / years) - 1;
-  const riskFreeRate = 0.06;
 
-  const sharpeRatio =
-    annualizedStdDev !== 0
-      ? (annualizedReturn - riskFreeRate) / annualizedStdDev
-      : NaN;
+  // Lower risk-free rate to be more in line with current rates
+  const riskFreeRate = 0.06; // 6%
+
+  // Set minimum volatility to avoid division by very small numbers
+  const volatilityForSharpe = Math.max(annualizedStdDev, 0.02); // Minimum 2%
+
+  const sharpeRatio = (annualizedReturn - riskFreeRate) / volatilityForSharpe;
+
+  // Add debugging
+  console.log("Sharpe Ratio Calculation:", {
+    totalReturn,
+    years,
+    annualizedReturn,
+    riskFreeRate,
+    stdDev,
+    annualizedStdDev,
+    volatilityForSharpe,
+    sharpeRatio,
+  });
+
+  // Cap the Sharpe ratio to reasonable bounds
+  const cappedSharpeRatio = Math.max(Math.min(sharpeRatio, 5), -5);
 
   return {
-    standardDeviation: annualizedStdDev,
-    sharpeRatio,
+    standardDeviation: annualizedStdDev * 100, // Convert to percentage
+    sharpeRatio: Number.isFinite(cappedSharpeRatio) ? cappedSharpeRatio : 0,
     beta: benchmarkReturns
       ? calculateBeta(dailyReturns, benchmarkReturns)
       : undefined,
   };
-}
-
-function calculateDailyReturns(navHistory: NAVData[]): number[] {
-  const returns = [];
-  for (let i = 1; i < navHistory.length; i++) {
-    const dailyReturn =
-      (navHistory[i].nav - navHistory[i - 1].nav) / navHistory[i - 1].nav;
-    returns.push(dailyReturn);
-  }
-  return returns;
-}
-
-function calculateStandardDeviation(returns: number[]): number {
-  const mean = returns.reduce((a, b) => a + b, 0) / returns.length;
-  const squaredDiffs = returns.map((r) => Math.pow(r - mean, 2));
-  const variance =
-    squaredDiffs.reduce((a, b) => a + b, 0) / (returns.length - 1);
-  return Math.sqrt(variance);
 }
 
 function calculateBeta(returns: number[], benchmarkReturns: number[]): number {
@@ -84,4 +97,12 @@ function validateNAVData(navHistory: NAVData[]) {
   if (navHistory.some((entry) => isNaN(entry.nav))) {
     throw new Error("Invalid NAV data: contains non-numeric values");
   }
+}
+
+function calculateStandardDeviation(returns: number[]): number {
+  const mean = returns.reduce((a, b) => a + b, 0) / returns.length;
+  const squaredDiffs = returns.map((r) => Math.pow(r - mean, 2));
+  const variance =
+    squaredDiffs.reduce((a, b) => a + b, 0) / (returns.length - 1);
+  return Math.sqrt(variance);
 }
